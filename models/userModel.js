@@ -21,7 +21,17 @@ const userSchema = new mongoose.Schema(
       minLength: 8,
       select: false,
     },
-
+    confirmPassword: {
+      retuired: true,
+      type: String,
+      validate: {
+        // this only works on save
+        validator: function(val) {
+          return this.password === val;
+        },
+        message: "password dosn't match"
+      }
+    },
     role: {
       type: String,
       enum: ["user", "admin"],
@@ -34,7 +44,6 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
   },
-
   { timestamps: true }
 );
 

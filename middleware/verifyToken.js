@@ -11,7 +11,8 @@ const protect = async (req, res, next) => {
   ) {
     accessToken = req.headers.authorization.split(" ")[1];
   }
-  let refreshToken = req.cookies.refreshToken;
+  let refreshToken = req.cookies.refreshToken
+  
 
   if (accessToken) {
     try {

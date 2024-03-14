@@ -3,37 +3,31 @@ const generateToken = require("../utils/generateToken");
 
 const register = async (req, res) => {
   try {
-    const { firstname, lastname, email, phoneNumber, password, eduyear } =
+    const { username,email, password, confirmPassword } =
       req.body;
 
-    const userExists = await User.findOne({ phoneNumber: phoneNumber });
+      console.log('hello')
+    const userExists = await User.findOne({ email: email });
 
     if (userExists) {
       res.status(409).json("user already exists");
     }
 
-    if (!firstname || !lastname || !phoneNumber || !email || !eduyear) {
+    if (!username || !password || !email || !confirmPassword) {
       return res.status(404).json("Some data is missing");
     }
 
     const newUser = await User.create({
-      firstname,
-      lastname,
+      username,
       email,
-      phoneNumber,
-      password,
-      eduyear,
+      password,confirmPassword
     });
 
     await generateToken(res, newUser._id);
 
     res.status(200).json({
-      _id: newUser._id,
-      firstname: newUser.firstname,
-      lastname: newUser.lastname,
-      email: newUser.email,
-      phoneNumber: newUser.phoneNumber,
-      eduyear: newUser.eduyear,
+      status:'success',
+      newUser
     });
   } catch (error) {
     console.log(error);

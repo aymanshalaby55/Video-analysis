@@ -16,6 +16,7 @@ const generateToken = async (res, userId) => {
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 
+  // set authorization headers
   res.setHeader("Authorization", `Bearer ${accessToken}`);
 
   return { accessToken };
