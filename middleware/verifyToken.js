@@ -1,67 +1,66 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/userModel");
+const jwt = require('jsonwebtoken');
 
-require("dotenv").config({ path: ".env" });
+const User = require('../models/userModel');
+const AppError = require('../utils/appError');
 
 const protect = async (req, res, next) => {
   let accessToken;
   if (
     req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
+    req.headers.authorization.startsWith('Bearer')
   ) {
-    accessToken = req.headers.authorization.split(" ")[1];
+    accessToken = req.headers.authorization.split(' ')[1];
   }
-  let refreshToken = req.cookies.refreshToken
-  
+  const { refreshToken } = req.cookies;
 
   if (accessToken) {
     try {
       const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
-      req.user = await User.findById(decoded.userId).select("-password");
+      req.user = await User.findById(decoded.userId).select('-password');
 
       next();
     } catch (error) {
-      if (error.name === "TokenExpiredError") {
+      if (error.name === 'TokenExpiredError') {
         // Access token expired; attempt to refresh using refreshToken
         try {
           const refreshDecoded = jwt.verify(
             refreshToken,
-            process.env.JWT_REFRESH_SECRET
+            process.env.JWT_REFRESH_SECRET,
           );
           const newAccessToken = jwt.sign(
             { userId: refreshDecoded.userId },
             process.env.JWT_ACCESS_SECRET,
             {
-              expiresIn: "15m",
-            }
+              expiresIn: '15m',
+            },
           );
 
-          res.setHeader("Authorization", `Bearer ${newAccessToken}`);
+          res.setHeader('Authorization', `Bearer ${newAccessToken}`);
 
           // Proceed with the request after setting the new access token
           req.user = await User.findById(refreshDecoded.userId).select(
-            "-password"
+            '-password',
           );
           next();
         } catch (refreshError) {
-          console.log(refreshError);
-          res.status(401).json("Refresh token expired or invalid");
+          // console.log(refreshError);
+          res.status(401).json('Refresh token expired or invalid');
         }
       } else {
-        res.status(401).json("No access token provided");
+        res.status(401).json('No access token provided');
       }
     }
   } else {
-    res.status(401).json("Not authorized");
+    res.status(401).json('Not authorized');
   }
 };
 
 const verifyTokenAndAdmin = (req, res, next) => {
   protect(req, res, () => {
-    if (req.user && req.user.type === "admin") {
+    if (req.user && req.user.type === 'admin') {
       next();
     } else {
-      res.status(403).json("You're Not an Admin");
+      return next(new AppError('You are not authorized', 404));
     }
   });
 };

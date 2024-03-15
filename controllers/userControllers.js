@@ -1,50 +1,49 @@
-const User = require("../models/userModel");
-const generateToken = require("../utils/generateToken");
+const CatchAsync = require('express-async-handler');
 
-const register = async (req, res) => {
-  try {
-    const { username,email, password, confirmPassword } =
-      req.body;
+const User = require('../models/userModel');
+const generateToken = require('../utils/generateToken');
+const AppError = require('../utils/appError');
 
-      console.log('hello')
-    const userExists = await User.findOne({ email: email });
+const register = async (req, res, next) => {
+  const { username, email, password, confirmPassword } = req.body;
 
-    if (userExists) {
-      res.status(409).json("user already exists");
-    }
+  const userExists = await User.findOne({ email: email });
 
-    if (!username || !password || !email || !confirmPassword) {
-      return res.status(404).json("Some data is missing");
-    }
-
-    const newUser = await User.create({
-      username,
-      email,
-      password,confirmPassword
-    });
-
-    await generateToken(res, newUser._id);
-
-    res.status(200).json({
-      status:'success',
-      newUser
-    });
-  } catch (error) {
-    console.log(error);
+  if (userExists) {
+    return next(new AppError('user already exist', 409));
   }
+
+  if (!username || !password || !email || !confirmPassword) {
+    return next(new AppError('some data is missing', 404));
+  }
+
+  const newUser = await User.create({
+    username,
+    email,
+    password,
+    confirmPassword,
+  });
+
+  const token = await generateToken(res, newUser._id);
+
+  res.status(200).json({
+    status: 'success',
+    newUser,
+    token,
+  });
 };
 
-const login = async (req, res) => {
+const login = CatchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json("Please Provide The Email And the Password");
+    return next(new AppError('Email or Password is missing', 400));
   }
 
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email }).select('+password');
 
   if (!user || !(await user.correctPassword(password, user.password))) {
-    return res.status(400).json("Incorrect Username or Password");
+    return next(new AppError('invalid Email or Password', 409));
   }
 
   user.password = undefined;
@@ -52,41 +51,39 @@ const login = async (req, res) => {
   const { accessToken } = await generateToken(res, user._id);
 
   return res.status(200).json({ user, accessToken });
+});
+
+const logout = (req, res) => {
+  res.clearCookie('jwt');
+
+  res.status(200).json({ status: 'success' });
 };
 
-const logout = async (req, res) => {
-  res.cookie("refreshToken", "", {
-    httpOnly: true,
-    expires: new Date(0),
-  });
+// fix this
+// const getAllUsers = async (req, res, next) => {
+//   try {
+//     let query = {};
 
-  res.status(201).json("User Logged Out");
-};
+//     if (req.query.search) {
+//       const searchRegex = new RegExp(req.query.search, 'i');
+//       query = {
+//         $or: [{ firstname: searchRegex }, { phoneNumber: searchRegex }],
+//       };
+//     }
 
-const getAllUsers = async (req, res) => {
-  try {
-    let query = {};
+//     let users;
 
-    if (req.query.search) {
-      const searchRegex = new RegExp(req.query.search, "i");
-      query = {
-        $or: [{ firstname: searchRegex }, { phoneNumber: searchRegex }],
-      };
-    }
+//     users = await User.find(query);
 
-    let users;
+//     if (!req.query.search) {
+//       users = [];
+//     }
+//     const usersCount = await User.countDocuments();
 
-    users = await User.find(query);
+//     return res.status(201).json({ users, usersCount });
+//   } catch (error) {
+//     return res.status(500).json(error.message);
+//   }
+// };
 
-    if (!req.query.search) {
-      users = [];
-    }
-    const usersCount = await User.countDocuments();
-
-    return res.status(201).json({ users, usersCount });
-  } catch (error) {
-    return res.status(500).json(error.message);
-  }
-};
-
-module.exports = { register, login, logout, getAllUsers };
+module.exports = { register, login, logout };
