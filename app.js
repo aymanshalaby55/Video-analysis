@@ -2,6 +2,7 @@ require('dotenv').config({ path: '.env' });
 const cookieParser = require('cookie-parser');
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 // routers
 const videoRouts = require('./routers/videoRouts');
@@ -16,6 +17,12 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(
+  cors({
+    credentials: true,
+    origin: ['http://localhost:3000'],
+  }),
+);
 
 const PORT = process.env.PORT || 4040;
 
@@ -29,7 +36,7 @@ mongoose
   });
 
 app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/video', videoRouts);
+app.use('/api/v1/videos', videoRouts);
 
 app.listen(PORT, () => {
   console.log('listening on port', PORT);

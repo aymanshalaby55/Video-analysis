@@ -2,6 +2,7 @@ const cloudinary = require('cloudinary');
 const multer = require('multer');
 
 const Video = require('../models/videoModel');
+const User = require('../models/userModel');
 
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
@@ -53,6 +54,10 @@ exports.uploadVideo = async (req, res, next) => {
 
         const newVideo = await Video.create({
           videoUrl,
+        });
+
+        await User.findByIdAndUpdate(req.user._id, {
+          $push: { videos: newVideo._id },
         });
 
         return res.status(201).json(newVideo);
