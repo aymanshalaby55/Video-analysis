@@ -26,6 +26,8 @@ const register = async (req, res, next) => {
 
   const token = await generateToken(res, newUser._id);
 
+  newUser.password = undefined;
+
   res.status(200).json({
     status: 'success',
     newUser,
@@ -59,6 +61,8 @@ const logout = (req, res) => {
   res.status(200).json({ status: 'success' });
 };
 
+// display video
+const getAllVideos = (req, res, next) => {};
 // fix this
 // const getAllUsers = async (req, res, next) => {
 //   try {
@@ -86,4 +90,4 @@ const logout = (req, res) => {
 //   }
 // };
 
-module.exports = { register, login, logout };
+module.exports = { register, login, logout, getAllVideos };
