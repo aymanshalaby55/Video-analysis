@@ -55,10 +55,13 @@ const login = CatchAsync(async (req, res, next) => {
   return res.status(200).json({ user, accessToken });
 });
 
-const logout = (req, res) => {
-  res.clearCookie('jwt');
+const logout = async (req, res) => {
+  res.cookie('refreshToken', '', {
+    httpOnly: true,
+    expires: new Date(0),
+  });
 
-  res.status(200).json({ status: 'success' });
+  res.status(201).json('User Logged Out');
 };
 
 // display video
