@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const videoSchema = new mongoose.Schema({
   videoUrl: {
     type: String,
-    required: true
-  }
+    required: true,
+  },
 });
 
 const Video = mongoose.model('Video', videoSchema);

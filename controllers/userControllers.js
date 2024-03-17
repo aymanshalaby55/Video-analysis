@@ -4,7 +4,7 @@ const User = require('../models/userModel');
 const generateToken = require('../utils/generateToken');
 const AppError = require('../utils/appError');
 
-const register = async (req, res, next) => {
+exports.register = async (req, res, next) => {
   const { username, email, password, confirmPassword } = req.body;
 
   const userExists = await User.findOne({ email: email });
@@ -26,6 +26,8 @@ const register = async (req, res, next) => {
 
   const token = await generateToken(res, newUser._id);
 
+  newUser.password = undefined;
+
   res.status(200).json({
     status: 'success',
     newUser,
@@ -33,7 +35,7 @@ const register = async (req, res, next) => {
   });
 };
 
-const login = CatchAsync(async (req, res, next) => {
+exports.login = CatchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -53,7 +55,7 @@ const login = CatchAsync(async (req, res, next) => {
   return res.status(200).json({ user, accessToken });
 });
 
-const logout = async (req, res) => {
+exports.logout = async (req, res) => {
   res.cookie('refreshToken', '', {
     httpOnly: true,
     expires: new Date(0),
@@ -61,32 +63,3 @@ const logout = async (req, res) => {
 
   res.status(201).json('User Logged Out');
 };
-
-// fix this
-// const getAllUsers = async (req, res, next) => {
-//   try {
-//     let query = {};
-
-//     if (req.query.search) {
-//       const searchRegex = new RegExp(req.query.search, 'i');
-//       query = {
-//         $or: [{ firstname: searchRegex }, { phoneNumber: searchRegex }],
-//       };
-//     }
-
-//     let users;
-
-//     users = await User.find(query);
-
-//     if (!req.query.search) {
-//       users = [];
-//     }
-//     const usersCount = await User.countDocuments();
-
-//     return res.status(201).json({ users, usersCount });
-//   } catch (error) {
-//     return res.status(500).json(error.message);
-//   }
-// };
-
-module.exports = { register, login, logout };
