@@ -1,8 +1,12 @@
-const Router = require('express').Router();
+const router = require('express').Router();
 
 const videoController = require('../controllers/videoConroller');
 const { protect } = require('../middleware/verifyToken');
 
-Router.post('/uploadVideo', protect, videoController.uploadVideo);
+router.use(protect);
 
-module.exports = Router;
+router.get('/getAllVideos', videoController.getAllVideos);
+router.post('/uploadVideo', videoController.uploadVideo);
+router.delete('/deleteVideo/:videoId', videoController.deleteVideo);
+
+module.exports = router;

@@ -1,18 +1,15 @@
 const express = require('express');
 
 const router = express.Router();
-const { verifyTokenAndAdmin } = require("../middleware/verifyToken");
+const { verifyTokenAndAdmin, protect } = require('../middleware/verifyToken');
 
-const {
-  register,
-  login,
-  logout,
-  getAllUsers,
-} = require("../controllers/userControllers");
+const userConrtollers = require('../controllers/userControllers');
 
-router.post("/register", register);
-router.post("/login", login);
-router.post("/logout", logout);
-router.get("/", verifyTokenAndAdmin, getAllUsers);
+router.post('/register', userConrtollers.register);
+router.post('/login', userConrtollers.login);
+
+// router.get('/', verifyTokenAndAdmin, getAllUsers);
+router.use(protect);
+router.post('/logout', userConrtollers.logout);
 
 module.exports = router;

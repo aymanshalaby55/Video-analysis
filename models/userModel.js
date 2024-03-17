@@ -37,12 +37,13 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin'],
       default: 'user',
     },
-
-    videos: {
-      type: mongoose.Schema.ObjectId,
-      ref: 'Video',
-      unique: true,
-    },
+    videos: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Video',
+        unique: true,
+      },
+    ],
   },
   { timestamps: true },
 );
