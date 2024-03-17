@@ -127,14 +127,10 @@ exports.deleteVideo = CatchAsync(async (req, res, next) => {
 
 exports.getAllVideos = CatchAsync(async (req, res, next) => {
   const { user } = req;
-  // console.log(user);
 
-  // const { videos } = await user.populate({
-  //   path: 'videos',
-  // });
-  const users = await User.findById({ _id: user._id });
-  console.log(users);
-  res.status(200).json({
-    status: 'success',
+  const { videos } = await user.populate({
+    path: 'videos',
   });
+
+  res.status(200).json(videos);
 });
