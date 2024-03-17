@@ -65,7 +65,7 @@ const logout = async (req, res) => {
 };
 
 // display video
-const getAllVideos = (req, res, next) => {};
+
 // fix this
 // const getAllUsers = async (req, res, next) => {
 //   try {
@@ -93,4 +93,4 @@ const getAllVideos = (req, res, next) => {};
 //   }
 // };
 
-module.exports = { register, login, logout, getAllVideos };
+module.exports = { register, login, logout };
