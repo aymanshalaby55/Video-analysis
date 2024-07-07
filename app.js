@@ -3,7 +3,6 @@ const cookieParser = require('cookie-parser');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-
 // routers
 const videoRouts = require('./routers/videoRouts');
 const userRoutes = require('./routers/userRoutes');
@@ -13,14 +12,14 @@ const GlobalError = require('./controllers/errorController');
 const AppErorr = require('./utils/appError');
 
 const app = express();
-
+app.use('/uploads', express.static('uploads'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
     credentials: true,
-    origin: ['http://localhost:3000'],
+    origin: ['http://localhost:300' ,'https://new.csb.app/'],
   }),
 );
 

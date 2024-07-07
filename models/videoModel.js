@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const videoSchema = new mongoose.Schema({
-  videoUrl: {
+  videoPath: {
     type: String,
     required: true,
   },

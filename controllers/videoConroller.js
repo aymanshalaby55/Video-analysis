@@ -1,33 +1,49 @@
 const cloudinary = require('cloudinary');
 const multer = require('multer');
 const CatchAsync = require('express-async-handler');
+const path = require('path');
 
 const Video = require('../models/videoModel');
 const User = require('../models/userModel');
 
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-});
+// cloudinary.config({
+//   cloud_name: process.env.CLOUD_NAME,
+//   api_key: process.env.API_KEY,
+//   api_secret: process.env.API_SECRET,
+// });
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
+  destination: './AllVideos',
   filename: function (req, file, cb) {
-    cb(null, file.originalname); // Define how the uploaded files should be named
+    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname)); // Define how the uploaded files should be named
   },
 });
 
+function checkFileType(file, cb) {
+  // Allowed extensions
+  const filetypes = /mp4|mkv|mov|avi/;
+  // Check extension
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+  // Check mime type
+  const mimetype = filetypes.test(file.mimetype);
+  console.log(extname);
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb('Error: Videos Only!');
+  }
+}
+
 const upload = multer({
   storage: storage,
+  limits: { fileSize: 100000000 }, // 100MB
   fileFilter: function (req, file, cb) {
-    if (file.mimetype.startsWith('video/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only video files are allowed'));
-    }
+    checkFileType(file, cb);
   },
-}).single('videoUrl');
+}).single('Video');
+
 
 exports.uploadVideo = async (req, res, next) => {
   try {
@@ -43,25 +59,31 @@ exports.uploadVideo = async (req, res, next) => {
           return res.status(400).json({ message: 'No video uploaded' });
         }
 
-        const uploadedVideo = await cloudinary.v2.uploader.upload(
-          req.file.path,
-          {
-            resource_type: 'video',
-            folder: 'videos',
-          },
-        );
+        // const uploadedVideo = await cloudinary.v2.uploader.upload(
+        //   req.file.path,
+        //   {
+        //     resource_type: 'video',
+        //     folder: 'videos',
+        //   },
+        // );
 
-        const { secure_url: videoUrl } = uploadedVideo;
+        const videoPath = req.file.path;
 
         const newVideo = await Video.create({
-          videoUrl,
+          videoPath,
         });
 
-        await User.findByIdAndUpdate(req.user._id, {
-          $push: { videos: newVideo._id },
-        });
-
-        return res.status(201).json(newVideo);
+        // await User.findByIdAndUpdate(req.user._id, {
+        //   $push: { videos: newVideo._id },
+        // });else {
+        if (req.file == undefined) {
+          res.status(400).send({ message: 'No file selected!' });
+        } else {
+          res.send({
+            message: 'File uploaded!',
+            file: `uploads/${req.file.path}`
+          });
+        }
       } catch (error) {
         return res.status(500).json({
           error,
@@ -72,6 +94,46 @@ exports.uploadVideo = async (req, res, next) => {
     return res.status(500).json({ error: 'An internal server error occurred' });
   }
 };
+// test
+exports.getVideo = ((req, res , next) => {
+  console.log("here")
+  const videoPath = path.resolve(__dirname, 'D:/Programming/Graduation Project/Video-analysis/AllVideos/Video-1720198893298.mp4');
+  const videoStat = fs.statSync(videoPath);
+  const fileSize = videoStat.size;
+  const range = req.headers.range;
+
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+    if (start >= fileSize) {
+      res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
+      return;
+    }
+
+    const chunksize = (end - start) + 1;
+    const file = fs.createReadStream(videoPath, { start, end });
+    const head = {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunksize,
+      'Content-Type': 'video/mp4',
+    };
+
+    res.writeHead(206, head);
+    file.pipe(res);
+  } else {
+    const head = {
+      'Content-Length': fileSize,
+      'Content-Type': 'video/mp4',
+    };
+    res.writeHead(200, head);
+    fs.createReadStream(videoPath).pipe(res);
+  }
+});
+
+
 
 exports.deleteVideo = CatchAsync(async (req, res, next) => {
   const { videoId } = req.params;
