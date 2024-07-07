@@ -57,7 +57,7 @@ const protect = async (req, res, next) => {
 
 const verifyTokenAndAdmin = (req, res, next) => {
   protect(req, res, () => {
-    if (req.user && req.user.type === 'admin') {
+    if (req.user && req.user.role === 'admin') {
       next();
     } else {
       return next(new AppError('You are not authorized', 404));

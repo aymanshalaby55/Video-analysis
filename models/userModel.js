@@ -37,6 +37,15 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin'],
       default: 'user',
     },
+
+    isPremium: {
+      type: Boolean,
+      default: false,
+    },
+    dateOfBirth: {
+      type: Date,
+      required: [true, 'user must have a date of birth'],
+    },
     videos: [
       {
         type: mongoose.Schema.ObjectId,

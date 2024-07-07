@@ -5,7 +5,7 @@ const generateToken = require('../utils/generateToken');
 const AppError = require('../utils/appError');
 
 exports.register = async (req, res, next) => {
-  const { username, email, password, confirmPassword } = req.body;
+  const { username, email, password, confirmPassword, isPremium, dateOfBirth } = req.body;
 
   const userExists = await User.findOne({ email: email });
 
@@ -22,6 +22,8 @@ exports.register = async (req, res, next) => {
     email,
     password,
     confirmPassword,
+    isPremium,
+    dateOfBirth,
   });
 
   const token = await generateToken(res, newUser._id);
@@ -63,3 +65,22 @@ exports.logout = async (req, res) => {
 
   res.status(201).json('User Logged Out');
 };
+
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    
+    const users = await User.find();
+
+    if(!users) {
+      return res.status(404).json({
+        message: "there is no users at that moment"
+      })
+    }
+
+    res.status(200).json({ users });
+  } catch (error) {
+    
+    res.status(500).json({ message: error.message });
+  }
+}
