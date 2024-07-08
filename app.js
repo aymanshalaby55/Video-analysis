@@ -19,7 +19,7 @@ app.use(cookieParser());
 app.use(
   cors({
     credentials: true,
-    origin: ['http://localhost:300' ,'https://new.csb.app/'],
+    origin: ['http://localhost:3000'],
   }),
 );
 
