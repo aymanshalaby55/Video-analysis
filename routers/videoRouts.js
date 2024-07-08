@@ -6,8 +6,7 @@ const { protect } = require('../middleware/verifyToken');
 router.use(protect);
 router.get('/getAllVideos?', videoController.getAllVideos);
 router.post('/uploadVideo', videoController.uploadVideo);
-router.post('/getVideo', videoController.getVideo);
-
+router.get('/getVideo', videoController.getVideo);
 
 router.delete('/deleteVideo/:videoId', videoController.deleteVideo);
 //router.get('/analyzeVideo/:videourl', videoController.analyzeVideo);
