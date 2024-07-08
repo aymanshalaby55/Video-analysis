@@ -2,9 +2,12 @@ const cloudinary = require('cloudinary');
 const multer = require('multer');
 const CatchAsync = require('express-async-handler');
 const path = require('path');
+const fs = require('fs');
+
 
 const Video = require('../models/videoModel');
 const User = require('../models/userModel');
+const APIFeatures = require('../utils/apiFeatures');
 
 // cloudinary.config({
 //   cloud_name: process.env.CLOUD_NAME,
@@ -58,30 +61,21 @@ exports.uploadVideo = async (req, res, next) => {
         if (!req.file || !req.file.path) {
           return res.status(400).json({ message: 'No video uploaded' });
         }
-
-        // const uploadedVideo = await cloudinary.v2.uploader.upload(
-        //   req.file.path,
-        //   {
-        //     resource_type: 'video',
-        //     folder: 'videos',
-        //   },
-        // );
-
-        const videoPath = req.file.path;
-
+        const videoPath = `uploads/${req.file.filename}`;
         const newVideo = await Video.create({
           videoPath,
         });
+        console.log(req.user);
+        await User.findByIdAndUpdate(req.user._id, {
+          $push: { videos: newVideo._id },
+        });
 
-        // await User.findByIdAndUpdate(req.user._id, {
-        //   $push: { videos: newVideo._id },
-        // });else {
         if (req.file == undefined) {
           res.status(400).send({ message: 'No file selected!' });
         } else {
           res.send({
             message: 'File uploaded!',
-            file: `uploads/${req.file.path}`
+            file: `AllVideos/${req.file.path}`
           });
         }
       } catch (error) {
@@ -95,7 +89,7 @@ exports.uploadVideo = async (req, res, next) => {
   }
 };
 // test
-exports.getVideo = ((req, res , next) => {
+exports.getVideo = ((req, res, next) => {
   console.log("here")
   const videoPath = path.resolve(__dirname, 'D:/Programming/Graduation Project/Video-analysis/AllVideos/Video-1720198893298.mp4');
   const videoStat = fs.statSync(videoPath);
@@ -113,7 +107,9 @@ exports.getVideo = ((req, res , next) => {
     }
 
     const chunksize = (end - start) + 1;
+    
     const file = fs.createReadStream(videoPath, { start, end });
+
     const head = {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
@@ -134,65 +130,68 @@ exports.getVideo = ((req, res , next) => {
 });
 
 
-
-exports.deleteVideo = CatchAsync(async (req, res, next) => {
-  const { videoId } = req.params;
-  const { user } = req;
-
-  const video = await Video.findByIdAndDelete(videoId);
-
-  const deleteUserVideo = await User.findByIdAndUpdate(user._id, {
-    $pull: { videos: videoId },
-  });
-
-  // delete video form video collection
-  console.log(user);
-
-  res.status(200).json({
-    status: 'success',
-    videos: user.videos,
-  });
-});
-
 exports.getAllVideos = CatchAsync(async (req, res, next) => {
   const { user } = req;
-  console.log('User before population:', user);
+  console.log('User before population:');
 
-  await user.populate({ path: 'videos' });
-  console.log('Populated videos:', user.videos);
+  console.log(user.videos)
+  await user.populate('videos');
+  const features = new APIFeatures(Video.find({ _id: { $in: user.videos.map(video => video._id) } }), req.query)
+    .filter()
+    .sort()
+    .limit()
+    .paginate();
+  const filteredVideos = await features.query;
+  console.log('Populated videos:', filteredVideos);
 
-  if (!user.videos || user.videos.length === 0) {
+  if (!filteredVideos || filteredVideos.length === 0) {
     return res.status(404).json({ message: 'No videos found for this user.' });
   }
 
-  res.status(200).json({ videos: user.videos });
+  res.status(200).json({ videos: filteredVideos });
 });
+
 
 exports.deleteVideo = CatchAsync(async (req, res, next) => {
-  const { videoId } = req.params;
+  const videoId = req.params.videoId;
   const { user } = req;
+  console.log(videoId);
 
-  const video = await Video.findByIdAndDelete(videoId);
-
-  const deleteUserVideo = await User.findByIdAndUpdate(user._id, {
-    $pull: { videos: videoId },
-  });
-
-  // delete video form video collection
-  console.log(user);
-
-  res.status(200).json({
-    status: 'success',
-    videos: user.videos,
-  });
+  // Corrected query to find the video by videoPath
+  const video = await Video.findById({_id:videoId});
+  console.log(video);
+  
+  if (video) {
+    const videoFilePath = 'D:/x.mp4';
+    console.log(videoFilePath);
+    await fs.unlink(videoFilePath, async (err) => {
+      if (err) {
+        console.error(`Failed to delete video file: ${err}`);
+        return res.status(500).json({ message: 'Failed to delete video file' });
+      } else {
+        console.log(`Video file ${video.videoPath} deleted successfully`);
+        
+        // Remove video from Video model
+        await Video.findByIdAndDelete(videoId);
+        
+        // Remove video from user's videos array
+        user.videos = user.videos.filter(v => v.toString() !== videoId);
+        await user.save();
+        
+        res.status(200).json({ message: 'Video deleted successfully' });
+      }
+    });
+  } else {
+    res.status(404).json({ message: 'Video not found' });
+  }
 });
 
-exports.getAllVideos = CatchAsync(async (req, res, next) => {
-  const { user } = req;
+// exports.getAllVideos = CatchAsync(async (req, res, next) => {
+//   const { user } = req;
 
-  const { videos } = await user.populate({
-    path: 'videos',
-  });
+//   const { videos } = await user.populate({
+//     path: 'videos',
+//   });
 
-  res.status(200).json(videos);
-});
+//   res.status(200).json(videos);
+// });

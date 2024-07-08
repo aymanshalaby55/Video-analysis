@@ -2,9 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const aiModelController = require('../controllers/aiModelController');
-const { protect } = require('../middleware/verifyToken');
+const { protect, verifyTokenAndAdmin } = require('../middleware/verifyToken');
 
-router.use(protect);
+router.use(protect , verifyTokenAndAdmin);
 
 router.route('/')
   .get(aiModelController.getAllAiModels)
