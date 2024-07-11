@@ -8,8 +8,8 @@ const userConrtollers = require('../controllers/userControllers');
 router.post('/register', userConrtollers.register);
 router.post('/login', userConrtollers.login);
 
-// router.get('/', verifyTokenAndAdmin, getAllUsers);
 router.use(protect);
+router.get('/', verifyTokenAndAdmin, userConrtollers.getAllUsers);
 router.post('/logout', userConrtollers.logout);
 
 module.exports = router;
