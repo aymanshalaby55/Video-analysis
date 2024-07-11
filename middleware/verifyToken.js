@@ -4,54 +4,38 @@ const User = require('../models/userModel');
 const AppError = require('../utils/appError');
 
 const protect = async (req, res, next) => {
-  let accessToken;
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    accessToken = req.headers.authorization.split(' ')[1];
-  }
+  const authHeader = req.headers.authorization;
   const { refreshToken } = req.cookies;
 
-  if (accessToken) {
+  if (authHeader && authHeader.startsWith('Bearer')) {
+    const accessToken = authHeader.split(' ')[1];
+
     try {
       const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
       req.user = await User.findById(decoded.userId).select('-password');
-
-      next();
+      return next();
     } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        // Access token expired; attempt to refresh using refreshToken
+      if (error.name === 'TokenExpiredError' && refreshToken) {
         try {
-          const refreshDecoded = jwt.verify(
-            refreshToken,
-            process.env.JWT_REFRESH_SECRET,
-          );
+          const refreshDecoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
           const newAccessToken = jwt.sign(
             { userId: refreshDecoded.userId },
             process.env.JWT_ACCESS_SECRET,
-            {
-              expiresIn: '15m',
-            },
+            { expiresIn: '15m' }
           );
 
           res.setHeader('Authorization', `Bearer ${newAccessToken}`);
-
-          // Proceed with the request after setting the new access token
-          req.user = await User.findById(refreshDecoded.userId).select(
-            '-password',
-          );
-          next();
+          req.user = await User.findById(refreshDecoded.userId).select('-password');
+          return next();
         } catch (refreshError) {
-          // console.log(refreshError);
-          res.status(401).json('Refresh token expired or invalid');
+          return res.status(401).json('Refresh token expired or invalid');
         }
       } else {
-        res.status(401).json('No access token provided');
+        return res.status(401).json('Invalid access token');
       }
     }
   } else {
-    res.status(401).json('Not authorized');
+    return res.status(401).json('Not authorized');
   }
 };
 

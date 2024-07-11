@@ -8,7 +8,7 @@ const AiSchema = new mongoose.Schema({
     },
     Active: {
         type: Boolean,
-        default: false
+        default: true
     },
     UsingNumber: {
         type: Number,
@@ -18,10 +18,6 @@ const AiSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true
-    },
-    trainingDataSize: {
-        type: Number,
-        required: true
     },
     accuracy: {
         type: Number,
