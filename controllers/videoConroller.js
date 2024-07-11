@@ -133,7 +133,7 @@ exports.getVideo = ((req, res, next) => {
     res.writeHead(200, head);
     fs.createReadStream(videoPath).pipe(res);
   }
-};
+});
 
 exports.getAllVideos = CatchAsync(async (req, res, next) => {
   const { user } = req;
