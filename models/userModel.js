@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
         validator: function (val) {
           return this.password === val;
         },
-        message: "password dosn't match", 
+        message: "password dosn't match",
       },
     },
     role: {
@@ -50,7 +50,6 @@ const userSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.ObjectId,
         ref: 'Video',
-        unique: true,
       },
     ],
   },
