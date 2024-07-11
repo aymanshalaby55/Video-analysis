@@ -19,7 +19,7 @@ app.use(cookieParser());
 app.use(
   cors({
     credentials: true,
-    origin: ['http://localhost:3000' ,'https://new.csb.app/'],
+    origin: ['http://localhost:3000', 'https://new.csb.app/'],
   }),
 );
 
@@ -36,6 +36,7 @@ mongoose
 
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/videos', videoRouts);
+
 
 app.listen(PORT, () => {
   console.log('listening on port', PORT);

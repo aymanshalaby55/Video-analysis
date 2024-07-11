@@ -29,7 +29,8 @@ function checkFileType(file, cb) {
   // Check extension
   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
   // Check mime type
-  const mimetype = filetypes.test(file.mimetype);
+  const mimetype = filetypes.test(file.mimetype); // search for it
+
   console.log(extname);
 
   if (mimetype && extname) {
@@ -61,7 +62,7 @@ exports.uploadVideo = async (req, res, next) => {
         if (!req.file || !req.file.path) {
           return res.status(400).json({ message: 'No video uploaded' });
         }
-        const videoPath = `uploads/${req.file.filename}`;
+        const videoPath = `AllVideos/${req.file.filename}`;
         const newVideo = await Video.create({
           videoPath,
         });
@@ -88,38 +89,39 @@ exports.uploadVideo = async (req, res, next) => {
     return res.status(500).json({ error: 'An internal server error occurred' });
   }
 };
-// test
+
 exports.getVideo = CatchAsync((req, res, next) => {
   const videoPath = path.resolve(__dirname, 'D:/Programming/Graduation Project/Video-analysis/AllVideos/x.mp4');
   const videoStat = fs.statSync(videoPath);
   const fileSize = videoStat.size;
   const range = req.headers.range;
-  
+
+  console.log(res);
   if (range) {
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    
+
     if (start >= fileSize) {
       res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
       return;
     }
-    
+
     const chunksize = (end - start) + 1;
-    
+
     const file = fs.createReadStream(videoPath, { start, end });
-    
+
     const head = {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
       'Content-Type': 'video/mp4',
     };
-    
+
     res.writeHead(206, head);
-    file.pipe(res);
+    file.pipe(res); // 
   } else {
-    console.log( __dirname);
+    console.log(__dirname);
     const head = {
       'Content-Length': fileSize,
       'Content-Type': 'video/mp4',
@@ -158,9 +160,9 @@ exports.deleteVideo = CatchAsync(async (req, res, next) => {
   console.log(videoId);
 
   // Corrected query to find the video by videoPath
-  const video = await Video.findById({_id:videoId});
+  const video = await Video.findById({ _id: videoId });
   console.log(video);
-  
+
   if (video) {
     const videoFilePath = 'D:/x.mp4';
     console.log(videoFilePath);
@@ -170,14 +172,14 @@ exports.deleteVideo = CatchAsync(async (req, res, next) => {
         return res.status(500).json({ message: 'Failed to delete video file' });
       } else {
         console.log(`Video file ${video.videoPath} deleted successfully`);
-        
+
         // Remove video from Video model
         await Video.findByIdAndDelete(videoId);
-        
+
         // Remove video from user's videos array
         user.videos = user.videos.filter(v => v.toString() !== videoId);
         await user.save();
-        
+
         res.status(200).json({ message: 'Video deleted successfully' });
       }
     });
