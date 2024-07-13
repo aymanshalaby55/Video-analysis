@@ -5,7 +5,8 @@ const generateToken = require('../utils/generateToken');
 const AppError = require('../utils/appError');
 
 exports.register = async (req, res, next) => {
-  const { username, email, password, confirmPassword, isPremium, dateOfBirth } = req.body;
+  const { username, email, password, confirmPassword, isPremium, dateOfBirth } =
+    req.body;
 
   const userExists = await User.findOne({ email: email });
 
@@ -66,21 +67,61 @@ exports.logout = async (req, res) => {
   res.status(201).json('User Logged Out');
 };
 
-
 exports.getAllUsers = async (req, res) => {
   try {
-    
     const users = await User.find();
 
-    if(!users) {
+    if (!users) {
       return res.status(404).json({
-        message: "there is no users at that moment"
-      })
+        message: 'there is no users at that moment',
+      });
     }
 
     res.status(200).json({ users });
   } catch (error) {
-    
     res.status(500).json({ message: error.message });
   }
-}
+};
+
+exports.updateStudent = async (req, res) => {
+  try {
+    const { username, email, dateOfBirth } = req.body;
+    const { userId } = req.params;
+
+    // check if the id in the params is the same for the logged in user
+    if (userId !== req.user.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      {
+        username,
+        dateOfBirth,
+        email,
+      },
+      { new: true },
+    );
+
+    return res
+      .status(201)
+      .json({ message: 'User Updated Successfully', user: updatedUser });
+  } catch (error) {
+    return res.status(500).json(error.message);
+  }
+};
+
+exports.getUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findOne({ _id: id }).populate("videos")
+
+    if (!user) {
+      return res.status(404).json('There Is No User With this id');
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    return res.status(500).json(error.message);
+  }
+};
