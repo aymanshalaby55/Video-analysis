@@ -6,6 +6,7 @@ const cors = require('cors');
 // routers
 const videoRouts = require('./routers/videoRouts');
 const userRoutes = require('./routers/userRoutes');
+const frameRoutes = require('./routers/frameRoutes');
 
 // error hendler
 const GlobalError = require('./controllers/errorController');
@@ -16,12 +17,7 @@ app.use('/uploads', express.static('uploads'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(
-  cors({
-    credentials: true,
-    origin: ['http://localhost:3000'],
-  }),
-);
+app.use(cors());
 
 const PORT = process.env.PORT || 4040;
 
@@ -36,7 +32,7 @@ mongoose
 
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/videos', videoRouts);
-
+app.use('/api/v1/frames', frameRoutes);
 
 app.listen(PORT, () => {
   console.log('listening on port', PORT);

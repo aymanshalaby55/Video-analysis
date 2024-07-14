@@ -1,7 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
-const aiModelController = require('../controllers/aiModelController');
+const aiModelController = require('../controllers/AiModelsController');
 const { protect, verifyTokenAndAdmin } = require('../middleware/verifyToken');
 
 router.use(protect , verifyTokenAndAdmin);
@@ -14,5 +14,7 @@ router.route('/:id')
   .get(aiModelController.getAiModel)
   .patch(aiModelController.updateAiModel)
   .delete(aiModelController.deleteAiModel);
+
+// use axios local for flask
 
 module.exports = router;

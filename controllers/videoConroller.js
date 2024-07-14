@@ -3,9 +3,15 @@ const multer = require('multer');
 const CatchAsync = require('express-async-handler');
 const path = require('path');
 const fs = require('fs');
+
 const Video = require('../models/videoModel');
 const User = require('../models/userModel');
 const APIFeatures = require('../utils/apiFeatures');
+const { extractFirstFrame } = require('.././utils/GetFrame');
+const Frame = require('../models/frameModel');
+
+// variables
+const FramePath = 'D:/Programming/Graduation Project/Video-analysis/public/Frames';
 
 // cloudinary.config({
 //   cloud_name: process.env.CLOUD_NAME,
@@ -15,7 +21,7 @@ const APIFeatures = require('../utils/apiFeatures');
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
-  destination: './AllVideos',
+  destination: './public/AllVideos',
   filename: function (req, file, cb) {
     cb(
       null,
@@ -63,24 +69,29 @@ exports.uploadVideo = async (req, res, next) => {
         if (!req.file || !req.file.path) {
           return res.status(400).json({ message: 'No video uploaded' });
         }
-        const videoPath = `AllVideos/${req.file.filename}`;
+        const videoPath = `public/AllVideos/${req.file.filename}`;
+        const savedFramePath = extractFirstFrame(videoPath, FramePath);
+        console.log(savedFramePath)
+
         const newVideo = await Video.create({
           videoPath,
         });
-        console.log(req.user);
+        const newFrame = await Frame.create({
+          video: newVideo,
+          framePath: savedFramePath
+
+        });
         await User.findByIdAndUpdate(req.user._id, {
           $push: { videos: newVideo._id },
         });
 
-        if (req.file == undefined) {
-          res.status(400).send({ message: 'No file selected!' });
-        } else {
-          res.send({
-            message: 'File uploaded!',
-            file: `AllVideos/${req.file.path}`,
-          });
-        }
+
+        res.send({
+          message: 'File uploaded!',
+          file: `AllVideos/${req.file.path}`,
+        });
       } catch (error) {
+        console.log(error);
         return res.status(500).json({
           error,
         });
@@ -91,49 +102,78 @@ exports.uploadVideo = async (req, res, next) => {
   }
 };
 
-exports.getVideo = ((req, res, next) => {
-  console.log("here")
-  const videoPath = path.resolve(__dirname, 'D:/Programming/Graduation Project/Video-analysis/AllVideos/Video-1720198893298.mp4');
-  const videoStat = fs.statSync(videoPath);
-  const fileSize = videoStat.size;
-  const range = req.headers.range;
-
-  console.log(res);
-  if (range) {
-    const parts = range.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-
-    if (start >= fileSize) {
-      res
-        .status(416)
-        .send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
-      return;
+exports.streamVideos = async (req, res, next) => {
+  try {
+    const videoIds = req.params.videoIds.split(','); // Assuming videoIds are passed as a URL parameter and split into an array
+    console.log(videoIds);
+    const videos = await Video.find({ _id: { $in: videoIds } });
+    if (videos.length === 0) {
+      return res.status(404).send('Videos not found');
     }
 
-    const chunksize = (end - start) + 1;
+    const videoPaths = videos.map(video => path.resolve(__dirname, `../${video.videoPath}`));
+    
+    for (let videoPath of videoPaths) {
+      if (!fs.existsSync(videoPath)) {
+        return res.status(404).send('One or more video files not found');
+      }
+    }
 
-    const file = fs.createReadStream(videoPath, { start, end });
+    let videoIndex = 0;
+    const videoStat = await fs.promises.stat(videoPaths[videoIndex]);
+    const fileSize = videoStat.size;
+    const range = req.headers.range;
 
-    const head = {
-      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunksize,
-      'Content-Type': 'video/mp4',
+    const streamNextVideo = (start) => {
+      if (videoIndex >= videoPaths.length) {
+        res.end();
+        return;
+      }
+
+      const videoPath = videoPaths[videoIndex];
+      const file = fs.createReadStream(videoPath, { start });
+
+      file.on('end', () => {
+        videoIndex += 1;
+        streamNextVideo(0);
+      });
+      console.log('hello')
+      file.pipe(res, { end: false });
     };
 
-    res.writeHead(206, head);
-    file.pipe(res); // 
-  } else {
-    console.log( __dirname);
-    const head = {
-      'Content-Length': fileSize,
-      'Content-Type': 'video/mp4',
-    };
-    res.writeHead(200, head);
-    fs.createReadStream(videoPath).pipe(res);
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (start >= fileSize) {
+        res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
+        return;
+      }
+
+      const chunksize = (end - start) + 1;
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4',
+      };
+
+      res.writeHead(206, head);
+      streamNextVideo(start);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+      };
+      res.writeHead(200, head);
+      streamNextVideo(0);
+    }
+  } catch (error) {
+    console.error('Error streaming videos:', error);
+    res.status(500).send('Internal Server Error');
   }
-});
+};
 
 exports.getAllVideos = CatchAsync(async (req, res, next) => {
   const { user } = req;
