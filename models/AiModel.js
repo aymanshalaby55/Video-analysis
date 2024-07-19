@@ -1,12 +1,17 @@
 const mongoose = require('mongoose');
+const validate = require('validator');
 
 const AiSchema = new mongoose.Schema({
-    name: {
+    modelName: {
         type: String,
         required: true,
         trim: true
     },
-    Active: {
+    modelURL: {
+        type: String,
+        required : true
+    },
+    isActive: {
         type: Boolean,
         default: true
     },
@@ -16,7 +21,6 @@ const AiSchema = new mongoose.Schema({
     },
     version: {
         type: String,
-        required: true,
         trim: true
     },
     accuracy: {

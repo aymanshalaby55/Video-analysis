@@ -4,16 +4,19 @@ const router = express.Router();
 const aiModelController = require('../controllers/AiModelsController');
 const { protect, verifyTokenAndAdmin } = require('../middleware/verifyToken');
 
-router.use(protect , verifyTokenAndAdmin);
+router.use(protect);
 
+router.get('/user/getAllModels', aiModelController.getUserAllAiModels)
+
+app.use(verifyTokenAndAdmin);
 router.route('/')
-  .get(aiModelController.getAllAiModels)
-  .post(aiModelController.createAiModel);
+  .get('/admin/getAllModels', aiModelController.getAdminAllAiModels)
+  .post('/createModel', aiModelController.createAiModel);
 
-router.route('/:id')
-  .get(aiModelController.getAiModel)
-  .patch(aiModelController.updateAiModel)
-  .delete(aiModelController.deleteAiModel);
+// router.route('/:id')
+//   .get(aiModelController.getAiModel)
+//   .patch(aiModelController.updateAiModel)
+//   .delete(aiModelController.deleteAiModel);
 
 // use axios local for flask
 
