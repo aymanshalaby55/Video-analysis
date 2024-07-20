@@ -7,6 +7,7 @@ const cors = require("cors");
 const videoRouts = require("./routers/videoRouts");
 const userRoutes = require("./routers/userRoutes");
 const frameRoutes = require("./routers/frameRoutes");
+const aiModelsRoutes = require("./routers/AiModelsRoutes");
 
 // error hendler
 const GlobalError = require("./controllers/errorController");
@@ -38,6 +39,7 @@ mongoose
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/videos", videoRouts);
 app.use("/api/v1/frames", frameRoutes);
+app.use("/api/v1/aiModels", aiModelsRoutes);
 
 app.listen(PORT, () => {
   console.log("listening on port", PORT);
