@@ -8,7 +8,7 @@ router.use(protect);
 
 router.get('/user/getAllModels', aiModelController.getUserAllAiModels)
 
-app.use(verifyTokenAndAdmin);
+router.use(verifyTokenAndAdmin);
 router.route('/')
   .get('/admin/getAllModels', aiModelController.getAdminAllAiModels)
   .post('/createModel', aiModelController.createAiModel);
