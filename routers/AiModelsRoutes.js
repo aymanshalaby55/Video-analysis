@@ -7,6 +7,13 @@ router.use(protect);
 
 router.get("/user/getAllModels", aiModelController.getUserAllAiModels);
 
+router.use(verifyTokenAndAdmin);
+router
+  .route("/")
+  .get("/admin/getAllModels", aiModelController.getAdminAllAiModels)
+  .post("/createModel", aiModelController.createAiModel);
+router.get("/user/getAllModels", aiModelController.getUserAllAiModels);
+
 // router.use(verifyTokenAndAdmin);
 router.post(
   "/createModel",

@@ -7,6 +7,7 @@ const cors = require("cors");
 const videoRouts = require("./routers/videoRouts");
 const userRoutes = require("./routers/userRoutes");
 const frameRoutes = require("./routers/frameRoutes");
+const aiCallRoutes = require("./routers/aiCallsRoutes");
 const aiModelsRoutes = require("./routers/AiModelsRoutes");
 
 // error hendler
@@ -20,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://127.0.0.1:5000"],
     credentials: true,
   }),
 );
@@ -39,6 +40,7 @@ mongoose
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/videos", videoRouts);
 app.use("/api/v1/frames", frameRoutes);
+app.use("/api/v1/aiCalls", aiCallRoutes);
 app.use("/api/v1/aiModels", aiModelsRoutes);
 
 app.listen(PORT, () => {
