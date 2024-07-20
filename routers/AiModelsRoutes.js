@@ -8,10 +8,8 @@ router.use(protect);
 router.get("/user/getAllModels", aiModelController.getUserAllAiModels);
 
 router.use(verifyTokenAndAdmin);
-router
-  .route("/")
-  .get("/admin/getAllModels", aiModelController.getAdminAllAiModels)
-  .post("/createModel", aiModelController.createAiModel);
+router.get("/admin/getAllModels", aiModelController.getAdminAllAiModels);
+router.post("/createModel", aiModelController.createAiModel);
 router.get("/user/getAllModels", aiModelController.getUserAllAiModels);
 
 // router.use(verifyTokenAndAdmin);
@@ -20,12 +18,12 @@ router.post(
   verifyTokenAndAdmin,
   aiModelController.createAiModel,
 );
-// .get("/admin/getAllModels", aiModelController.getAdminAllAiModels)
 
-// router.route('/:id')
-//   .get(aiModelController.getAiModel)
-//   .patch(aiModelController.updateAiModel)
-//   .delete(aiModelController.deleteAiModel);
+router.get("get/:id", aiModelController.getAiModel);
+
+router.delete("delete/:id/", aiModelController.deleteAiModel);
+
+router.patch("update/:id", aiModelController.updateAiModel);
 
 // use axios local for flask
 
