@@ -2,7 +2,7 @@ const AiModel = require("../models/AiModel");
 const CatchAsync = require("express-async-handler");
 
 exports.getUserAllAiModels = CatchAsync(async (req, res, next) => {
-  const aiModels = await AiModel.find();
+  const aiModels = await AiModel.find({ isActive: true });
   res.status(200).json({
     status: "success",
     results: aiModels.length,
@@ -13,7 +13,7 @@ exports.getUserAllAiModels = CatchAsync(async (req, res, next) => {
 });
 
 exports.getAdminAllAiModels = CatchAsync(async (req, res, next) => {
-  const aiModels = await AiModel.find({ isActive: true });
+  const aiModels = await AiModel.find();
   res.status(200).json({
     status: "success",
     results: aiModels.length,
