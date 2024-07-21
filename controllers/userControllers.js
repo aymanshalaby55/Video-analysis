@@ -101,9 +101,9 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-exports.updateStudent = async (req, res) => {
+exports.updatedUser = async (req, res) => {
   try {
-    const { username, email, dateOfBirth } = req.body;
+    const { username, email, dateOfBirth, isPremium } = req.body;
     const { userId } = req.params;
 
     // check if the id in the params is the same for the logged in user
@@ -117,6 +117,7 @@ exports.updateStudent = async (req, res) => {
         username,
         dateOfBirth,
         email,
+        isPremium
       },
       { new: true },
     );

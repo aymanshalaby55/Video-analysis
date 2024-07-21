@@ -25,6 +25,4 @@ router.delete("delete/:id/", aiModelController.deleteAiModel);
 
 router.patch("update/:id", aiModelController.updateAiModel);
 
-// use axios local for flask
-
 module.exports = router;

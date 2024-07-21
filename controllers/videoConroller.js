@@ -23,15 +23,18 @@ const FramePath = "F:/Programming/Final/api/public/Frames";
 // });
 
 // Configure Multer for file uploads
-const storage = multer.diskStorage({
-  destination: "./public/AllVideos",
-  filename: function (req, file, cb) {
-    cb(
-      null,
-      file.fieldname + "-" + Date.now() + path.extname(file.originalname),
-    ); // Define how the uploaded files should be named
-  },
-});
+// const storage = multer.diskStorage({
+//   destination: "./public/AllVideos",
+//   filename: function (req, file, cb) {
+//     cb(
+//       null,
+//       file.fieldname + "-" + Date.now() + path.extname(file.originalname),
+//     ); // Define how the uploaded files should be named
+//   },
+// });
+
+const storage = multer.memoryStorage();
+
 
 function checkFileType(file, cb) {
   // Allowed extensions
@@ -58,50 +61,52 @@ const upload = multer({
   },
 }).single("videoPath");
 
-exports.uploadVideo = async (req, res, next) => {
-  try {
-    upload(req, res, async (err) => {
-      try {
+exports.uploadVideo = CatchAsync(async (req, res, next) => {
+  const user = req.user;
+  upload(req, res,async err => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No video uploaded" });
+    }
+    const newstorageLimit = user.storageLimit - req.file.size;
+    if (newstorageLimit < 0) {
+      return res.status(400).json({ message: "user has achived his storage limit please upgrade for more storage" });
+    }
+    const videoPath = `./public/AllVideos/${req.file.fieldname}-${Date.now()}${path.extname(req.file.originalname)}`;
+    // console.log(savedFramePath);
+    try {
+      fs.writeFile(videoPath, req.file.buffer, async (err) => {
         if (err) {
           console.log(err);
-          return res
-            .status(400)
-            .json({ message: "Video upload failed", error: err });
+          return res.status(500).json({ message: "Failed to save video to disk", error: err });
         }
-
-        if (!req.file || !req.file.path) {
-          return res.status(400).json({ message: "No video uploaded" });
-        }
-        const videoPath = `public/AllVideos/${req.file.filename}`;
         const savedFramePath = extractFirstFrame(videoPath, FramePath);
-        console.log(savedFramePath);
-
-        const newVideo = await Video.create({
-          videoPath,
-        });
-        const newFrame = await Frame.create({
-          video: newVideo,
-          framePath: savedFramePath,
-        });
-        await User.findByIdAndUpdate(req.user._id, {
-          $push: { videos: newVideo._id },
-        });
-
-        res.send({
-          message: "File uploaded!",
-          file: `AllVideos/${req.file.path}`,
-        });
-      } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-          error,
-        });
-      }
+      });
+    } catch (error) {
+      fs.unlink(videoPath, (err) => {
+        if (err) {
+          console.error('Failed to delete the file:', err);
+        }
+      });
+      return next('Failed uploading video', 409);
+    }
+    const newVideo = await Video.create({
+      videoPath,
     });
-  } catch (error) {
-    return res.status(500).json({ error: "An internal server error occurred" });
-  }
-};
+    const newFrame = await Frame.create({
+      video: newVideo,
+      framePath: savedFramePath,
+    });
+    await User.findByIdAndUpdate(req.user._id, {
+      $push: { videos: newVideo._id },
+      storageLimit: newstorageLimit
+    });
+
+    res.send({
+      message: "File uploaded!",
+      file: `AllVideos/${req.file.path}`,
+    });
+  })
+});
 
 exports.streamVideos = async (req, res, next) => {
   try {

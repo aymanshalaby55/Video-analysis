@@ -13,6 +13,7 @@ const protect = async (req, res, next) => {
     try {
       const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
       req.user = await User.findById(decoded.userId).select('-password');
+      console.log(req.user);
       return next();
     } catch (error) {
       if (error.name === 'TokenExpiredError' && refreshToken) {

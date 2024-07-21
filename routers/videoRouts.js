@@ -2,6 +2,7 @@ const router = require("express").Router();
 
 const videoController = require("../controllers/videoConroller");
 const { protect, verifyTokenAndAdmin } = require("../middleware/verifyToken");
+const filesSizeValidation = require('../middleware/filesSizeValidation');
 
 router.get("/streamVideo/:videoIds", videoController.streamVideos);
 
