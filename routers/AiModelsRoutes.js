@@ -19,10 +19,18 @@ router.post(
   aiModelController.createAiModel,
 );
 
-router.get("get/:id", aiModelController.getAiModel);
+router.get("get/:id", verifyTokenAndAdmin, aiModelController.getAiModel);
 
-router.delete("delete/:id/", aiModelController.deleteAiModel);
+router.delete(
+  "/delete/:id",
+  verifyTokenAndAdmin,
+  aiModelController.deleteAiModel,
+);
 
-router.patch("update/:id", aiModelController.updateAiModel);
+router.patch(
+  "/update/:id",
+  verifyTokenAndAdmin,
+  aiModelController.updateAiModel,
+);
 
 module.exports = router;
