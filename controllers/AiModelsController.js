@@ -24,7 +24,8 @@ exports.getAdminAllAiModels = CatchAsync(async (req, res, next) => {
 });
 
 exports.getAiModel = CatchAsync(async (req, res, next) => {
-  const aiModel = await AiModel.findById(req.params.id);
+  const { id } = req.params;
+  const aiModel = await AiModel.findById(id);
   if (!aiModel) {
     return res.status(404).json({
       status: "fail",
