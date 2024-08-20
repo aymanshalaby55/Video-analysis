@@ -43,12 +43,11 @@ const userSchema = new mongoose.Schema(
     },
     storageLimit: {
       type: Number,
-      default: 2,
-      set: value => value * 1024 * 1024 * 1024, // 2GB
+      default: 2
+      // set: value => value * 1024 * 1024 * 1024, // 2GB
     },
     usedModels: [{
       type: mongoose.Schema.ObjectId,
-      unique: true,
       ref: 'AiModels'
 
     }],

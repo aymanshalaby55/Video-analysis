@@ -79,7 +79,7 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
           console.log(err);
           return res.status(500).json({ message: "Failed to save video to disk", error: err });
         }
-        const savedFramePath = extractFirstFrame(videoPath, FramePath);
+         const savedFramePath = extractFirstFrame(videoPath, FramePath);
       });
     } catch (error) {
       fs.unlink(videoPath, (err) => {
@@ -92,10 +92,10 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
     const newVideo = await Video.create({
       videoPath,
     });
-    const newFrame = await Frame.create({
-      video: newVideo,
-      framePath: savedFramePath,
-    });
+    // const newFrame = await Frame.create({
+    //   video: newVideo,
+    //   framePath: savedFramePath,
+    // });
     await User.findByIdAndUpdate(req.user._id, {
       $push: { videos: newVideo._id },
       storageLimit: newstorageLimit
