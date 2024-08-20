@@ -35,7 +35,6 @@ const FramePath = "F:/Programming/Final/api/public/Frames";
 
 const storage = multer.memoryStorage();
 
-
 function checkFileType(file, cb) {
   // Allowed extensions
   const filetypes = /mp4|mkv|mov|avi/;
@@ -63,13 +62,16 @@ const upload = multer({
 
 exports.uploadVideo = CatchAsync(async (req, res, next) => {
   const user = req.user;
-  upload(req, res,async err => {
+  upload(req, res, async (err) => {
     if (!req.file) {
       return res.status(400).json({ message: "No video uploaded" });
     }
     const newstorageLimit = user.storageLimit - req.file.size;
     if (newstorageLimit < 0) {
-      return res.status(400).json({ message: "user has achived his storage limit please upgrade for more storage" });
+      return res.status(400).json({
+        message:
+          "user has achived his storage limit please upgrade for more storage",
+      });
     }
     const videoPath = `./public/AllVideos/${req.file.fieldname}-${Date.now()}${path.extname(req.file.originalname)}`;
     // console.log(savedFramePath);
@@ -77,18 +79,21 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
       fs.writeFile(videoPath, req.file.buffer, async (err) => {
         if (err) {
           console.log(err);
-          return res.status(500).json({ message: "Failed to save video to disk", error: err });
+          return res
+            .status(500)
+            .json({ message: "Failed to save video to disk", error: err });
         }
          const savedFramePath = extractFirstFrame(videoPath, FramePath);
       });
     } catch (error) {
       fs.unlink(videoPath, (err) => {
         if (err) {
-          console.error('Failed to delete the file:', err);
+          console.error("Failed to delete the file:", err);
         }
       });
-      return next('Failed uploading video', 409);
+      return next("Failed uploading video", 409);
     }
+    const savedFramePath = extractFirstFrame(videoPath, FramePath);
     const newVideo = await Video.create({
       videoPath,
     });
@@ -98,14 +103,15 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
     // });
     await User.findByIdAndUpdate(req.user._id, {
       $push: { videos: newVideo._id },
-      storageLimit: newstorageLimit
+      storageLimit: newstorageLimit,
     });
 
     res.send({
       message: "File uploaded!",
       file: `AllVideos/${req.file.path}`,
+      limitStorage: newstorageLimit,
     });
-  })
+  });
 });
 
 exports.streamVideos = async (req, res, next) => {

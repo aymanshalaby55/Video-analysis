@@ -19,7 +19,7 @@ router.post(
   aiModelController.createAiModel,
 );
 
-router.get("get/:id", verifyTokenAndAdmin, aiModelController.getAiModel);
+router.get("/get/:id", verifyTokenAndAdmin, aiModelController.getAiModel);
 
 router.delete(
   "/delete/:id",
