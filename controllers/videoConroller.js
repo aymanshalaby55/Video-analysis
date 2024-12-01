@@ -1,249 +1,249 @@
-/* eslint-disable no-restricted-syntax */
-/* eslint-disable no-else-return */
-/* eslint-disable prefer-template */
-// const cloudinary = require("cloudinary");
 const multer = require("multer");
-const CatchAsync = require("express-async-handler");
-const path = require("path");
 const fs = require("fs");
+const util = require("util");
+const path = require("path");
+const CatchAsync = require("express-async-handler");
 
 const Video = require("../models/videoModel");
 const User = require("../models/userModel");
-const APIFeatures = require("../utils/apiFeatures");
-const { extractFirstFrame } = require("../utils/GetFrame");
-const Frame = require("../models/frameModel");
 
-// variables
-const FramePath = "./public/Frames";
+// Constants
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const ALLOWED_VIDEO_TYPES = /mp4|mkv|mov|avi/;
+const VIDEO_STORAGE_PATH = "./public/AllVideos";
 
-// cloudinary.config({
-//   cloud_name: process.env.CLOUD_NAME,
-//   api_key: process.env.API_KEY,
-//   api_secret: process.env.API_SECRET,
-// });
-
-// Configure Multer for file uploads
-// const storage = multer.diskStorage({
-//   destination: "./public/AllVideos",
-//   filename: function (req, file, cb) {
-//     cb(
-//       null,
-//       file.fieldname + "-" + Date.now() + path.extname(file.originalname),
-//     ); // Define how the uploaded files should be named
-//   },
-// });
-
+// Configure Multer storage
 const storage = multer.memoryStorage();
 
-function checkFileType(file, cb) {
-  // Allowed extensions
-  const filetypes = /mp4|mkv|mov|avi/;
-  // Check extension
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  // Check mime type
-  const mimetype = filetypes.test(file.mimetype); // search for it
+// Promisify fs functions we need
+const mkdir = util.promisify(fs.mkdir);
+const writeFile = util.promisify(fs.writeFile);
+const unlink = util.promisify(fs.unlink);
+const stat = util.promisify(fs.stat);
+const access = util.promisify(fs.access);
 
-  console.log(extname);
+// File type and size validator
+const fileFilter = (req, file, cb) => {
+  const isValidExtension = ALLOWED_VIDEO_TYPES.test(
+    path.extname(file.originalname).toLowerCase(),
+  );
+  const isValidMimeType = ALLOWED_VIDEO_TYPES.test(file.mimetype);
 
-  if (mimetype && extname) {
+  if (isValidExtension && isValidMimeType) {
     return cb(null, true);
-  } else {
-    cb("Error: Videos Only!");
   }
-}
 
+  cb(new Error("Invalid file type. Only video files are allowed."));
+};
+
+// Multer upload configuration
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 100000000 }, // 100MB
-  fileFilter: function (req, file, cb) {
-    checkFileType(file, cb);
-  },
-}).single("videoPath");
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter,
+}).array("videoPath", 5); // Allow up to 5 videos to be uploaded at once
 
 exports.uploadVideo = CatchAsync(async (req, res, next) => {
-  const user = req.user;
-  upload(req, res, async (err) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No video uploaded" });
-    }
-    const newstorageLimit = user.storageLimit - req.file.size;
-    if (newstorageLimit < 0) {
+  upload(req, res, async (uploadError) => {
+    // Handle multer upload errors
+    if (uploadError) {
       return res.status(400).json({
-        message:
-          "user has achived his storage limit please upgrade for more storage",
+        message: uploadError.message || "Video upload failed",
       });
     }
-    const videoPath = `./public/AllVideos/${req.file.fieldname}-${Date.now()}${path.extname(req.file.originalname)}`;
-    // console.log(savedFramePath);
+
+    // Check if files were uploaded
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        message: "No videos uploaded",
+      });
+    }
+
+    const { user } = req;
+    const totalSize = req.files.reduce((sum, file) => sum + file.size, 0);
+    const newStorageLimit = user.storageLimit - totalSize;
+
+    // Check storage limit
+    if (newStorageLimit < 0) {
+      return res.status(400).json({
+        message: "Storage limit exceeded. Please upgrade for more storage.",
+      });
+    }
+
     try {
-      fs.writeFile(videoPath, req.file.buffer, async (err) => {
-        if (err) {
-          console.log(err);
-          return res
-            .status(500)
-            .json({ message: "Failed to save video to disk", error: err });
-        }
-        //  const savedFramePath = extractFirstFrame(videoPath, FramePath);
+      // Ensure storage directory exists
+      await mkdir(VIDEO_STORAGE_PATH, { recursive: true });
+
+      // Process each uploaded file
+      const uploadedVideos = await Promise.all(
+        req.files.map(async (file) => {
+          // Generate unique filename
+          const filename = `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`;
+          const videoPath = path.join(VIDEO_STORAGE_PATH, filename);
+
+          // Write file to disk
+          await writeFile(videoPath, file.buffer);
+
+          // Create video record in database
+          return await Video.create({ videoPath });
+        }),
+      );
+
+      // Update user's videos and storage limit
+      await User.findByIdAndUpdate(user._id, {
+        $push: { videos: { $each: uploadedVideos.map((video) => video._id) } },
+        storageLimit: newStorageLimit,
+      });
+
+      res.status(201).json({
+        message: "Videos uploaded successfully",
+        videos: uploadedVideos.map((video) => video._id),
+        limitStorage: newStorageLimit,
       });
     } catch (error) {
-      fs.unlink(videoPath, (err) => {
-        if (err) {
-          console.error("Failed to delete the file:", err);
-        }
-      });
-      return next("Failed uploading video", 409);
-    }
-    // const savedFramePath = extractFirstFrame(videoPath, FramePath);
-    const newVideo = await Video.create({
-      videoPath,
-    });
-    // const newFrame = await Frame.create({
-    //   video: newVideo,
-    //   framePath: savedFramePath,
-    // });
-    await User.findByIdAndUpdate(req.user._id, {
-      $push: { videos: newVideo._id },
-      storageLimit: newstorageLimit,
-    });
+      // Clean up files if an error occurs
+      await Promise.all(
+        req.files.map(async (file) => {
+          try {
+            const filename = `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`;
+            const videoPath = path.join(VIDEO_STORAGE_PATH, filename);
+            await unlink(videoPath);
+          } catch (unlinkError) {
+            console.error("Failed to delete temporary file:", unlinkError);
+          }
+        }),
+      );
 
-    res.send({
-      message: "File uploaded!",
-      file: `AllVideos/${req.file.path}`,
-      limitStorage: newstorageLimit,
-    });
+      next(error);
+    }
   });
 });
 
-exports.streamVideos = async (req, res, next) => {
-  try {
-    const videoIds = req.params.videoIds.split(","); // Assuming videoIds are passed as a URL parameter and split into an array
+exports.streamVideos = CatchAsync(async (req, res, next) => {
+  const videoIds = req.params.videoIds.split(",");
 
-    const videos = await Video.find({ _id: { $in: videoIds } });
-    if (videos.length === 0) {
-      return res.status(404).send("Videos not found");
+  // Find videos in database
+  const videos = await Video.find({ _id: { $in: videoIds } });
+  if (videos.length === 0) {
+    return res.status(404).json({ message: "Videos not found" });
+  }
+
+  // Resolve full paths and check file existence
+  const videoPaths = videos.map((video) =>
+    path.resolve(__dirname, `../${video.videoPath}`),
+  );
+
+  const videoExists = await Promise.all(
+    videoPaths.map((videoPath) =>
+      access(videoPath)
+        .then(() => true)
+        .catch(() => false),
+    ),
+  );
+
+  if (videoExists.includes(false)) {
+    return res
+      .status(404)
+      .json({ message: "One or more video files not found" });
+  }
+
+  let videoIndex = 0;
+  const videoStat = await stat(videoPaths[videoIndex]);
+  const fileSize = videoStat.size;
+  const { range } = req.headers;
+
+  const streamNextVideo = (start) => {
+    if (videoIndex >= videoPaths.length) {
+      return res.end();
     }
 
-    const videoPaths = videos.map((video) =>
-      path.resolve(__dirname, `../${video.videoPath}`),
-    );
+    const videoPath = videoPaths[videoIndex];
+    const file = fs.createReadStream(videoPath, { start });
 
-    for (const videoPath of videoPaths) {
-      if (!fs.existsSync(videoPath)) {
-        return res.status(404).send("One or more video files not found");
-      }
-    }
+    file.on("end", () => {
+      videoIndex += 1;
+      streamNextVideo(0);
+    });
 
-    let videoIndex = 0;
-    const videoStat = await fs.promises.stat(videoPaths[videoIndex]);
-    const fileSize = videoStat.size;
-    const range = req.headers.range;
+    file.pipe(res, { end: false });
+  };
 
-    const streamNextVideo = (start) => {
-      if (videoIndex >= videoPaths.length) {
-        res.end();
-        return;
-      }
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
-      const videoPath = videoPaths[videoIndex];
-      const file = fs.createReadStream(videoPath, { start });
-
-      file.on("end", () => {
-        videoIndex += 1;
-        streamNextVideo(0);
+    if (start >= fileSize) {
+      return res.status(416).json({
+        message: "Requested range not satisfiable",
+        start,
+        fileSize,
       });
-      console.log("hello");
-      file.pipe(res, { end: false });
+    }
+
+    const chunksize = end - start + 1;
+    const head = {
+      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+      "Accept-Ranges": "bytes",
+      "Content-Length": chunksize,
+      "Content-Type": "video/mp4",
     };
 
-    if (range) {
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-
-      if (start >= fileSize) {
-        res
-          .status(416)
-          .send(
-            "Requested range not satisfiable\n" + start + " >= " + fileSize,
-          );
-        return;
-      }
-
-      const chunksize = end - start + 1;
-      const head = {
-        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-        "Accept-Ranges": "bytes",
-        "Content-Length": chunksize,
-        "Content-Type": "video/mp4",
-      };
-
-      res.writeHead(206, head);
-      streamNextVideo(start);
-    } else {
-      const head = {
-        "Content-Length": fileSize,
-        "Content-Type": "video/mp4",
-      };
-      res.writeHead(200, head);
-      streamNextVideo(0);
-    }
-  } catch (error) {
-    console.error("Error streaming videos:", error);
-    res.status(500).send("Internal Server Error");
+    res.writeHead(206, head);
+    streamNextVideo(start);
+  } else {
+    const head = {
+      "Content-Length": fileSize,
+      "Content-Type": "video/mp4",
+    };
+    res.writeHead(200, head);
+    streamNextVideo(0);
   }
-};
+});
 
-exports.getAllVideos = CatchAsync(async (req, res, next) => {
+exports.getAllVideos = CatchAsync(async (req, res) => {
   const videos = await Video.find();
+
   res.status(200).json({
     status: "success",
     results: videos.length,
-    data: {
-      videos,
-    },
+    data: { videos },
   });
 });
 
 exports.deleteVideo = CatchAsync(async (req, res, next) => {
-  const videoId = req.params.videoId;
+  const { videoId } = req.params;
   const { user } = req;
-  console.log(videoId);
 
-  // Corrected query to find the video by videoPath
-  const video = await Video.findById({ _id: videoId });
-  console.log(video);
+  // Find the video
+  const video = await Video.findById(videoId);
 
-  if (video) {
-    const videoFilePath = "D:/x.mp4";
-    console.log(videoFilePath);
-    await fs.unlink(videoFilePath, async (err) => {
-      if (err) {
-        console.error(`Failed to delete video file: ${err}`);
-        return res.status(500).json({ message: "Failed to delete video file" });
-      } else {
-        console.log(`Video file ${video.videoPath} deleted successfully`);
+  if (!video) {
+    return res.status(404).json({ message: "Video not found" });
+  }
 
-        // Remove video from Video model
-        await Video.findByIdAndDelete(videoId);
+  try {
+    // Delete video file from disk
+    await unlink(video.videoPath);
 
-        // Remove video from user's videos array
-        user.videos = user.videos.filter((v) => v.toString() !== videoId);
-        await user.save();
+    // Remove video from Video model
+    await Video.findByIdAndDelete(videoId);
 
-        res.status(200).json({ message: "Video deleted successfully" });
-      }
-    });
-  } else {
-    res.status(404).json({ message: "Video not found" });
+    // Remove video from user's videos array
+    user.videos = user.videos.filter((v) => v.toString() !== videoId);
+    await user.save();
+
+    res.status(200).json({ message: "Video deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting video:", error);
+
+    if (error.code === "ENOENT") {
+      // File not found error - still proceed with database cleanup
+      await Video.findByIdAndDelete(videoId);
+      user.videos = user.videos.filter((v) => v.toString() !== videoId);
+      await user.save();
+    }
+
+    next(error);
   }
 });
-
-// exports.getAllVideos = CatchAsync(async (req, res, next) => {
-//   const { user } = req;
-
-//   const { videos } = await user.populate({
-//     path: 'videos',
-//   });
-
-//   res.status(200).json(videos);
-// });

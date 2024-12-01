@@ -43,14 +43,15 @@ const userSchema = new mongoose.Schema(
     },
     storageLimit: {
       type: Number,
-      default: 2
+      default: 2,
       // set: value => value * 1024 * 1024 * 1024, // 2GB
     },
-    usedModels: [{
-      type: mongoose.Schema.ObjectId,
-      ref: 'AiModels'
-
-    }],
+    usedModels: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "AiModels",
+      },
+    ],
     dateOfBirth: {
       type: Date,
       required: [true, "user must have a date of birth"],
