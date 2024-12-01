@@ -3,6 +3,8 @@ const cookieParser = require("cookie-parser");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
 // routers
 const videoRouts = require("./routers/videoRouts");
 const userRoutes = require("./routers/userRoutes");
@@ -15,13 +17,17 @@ const GlobalError = require("./controllers/errorController");
 const AppErorr = require("./utils/appError");
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer);
+
 app.use("/uploads", express.static("uploads"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:5000"],
+    origin: ["*"],
     credentials: true,
   }),
 );
@@ -43,8 +49,8 @@ app.use("/api/v1/frames", frameRoutes);
 app.use("/api/v1/aiCalls", aiCallRoutes);
 app.use("/api/v1/aiModels", aiModelsRoutes);
 
-app.listen(PORT, () => {
-  console.log("listening on port", PORT);
+io.on("connection", (socket) => {
+  console.log(socket.id); // ojIckSD2jqNzOqIrAGzL
 });
 
 //! if we are able to reach this point then there is no rout to handle the request

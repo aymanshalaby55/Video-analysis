@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-else-return */
 /* eslint-disable prefer-template */
-const cloudinary = require("cloudinary");
+// const cloudinary = require("cloudinary");
 const multer = require("multer");
 const CatchAsync = require("express-async-handler");
 const path = require("path");
@@ -14,7 +14,7 @@ const { extractFirstFrame } = require("../utils/GetFrame");
 const Frame = require("../models/frameModel");
 
 // variables
-const FramePath = "F:/Programming/Final/api/public/Frames";
+const FramePath = "./public/Frames";
 
 // cloudinary.config({
 //   cloud_name: process.env.CLOUD_NAME,
@@ -83,7 +83,7 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
             .status(500)
             .json({ message: "Failed to save video to disk", error: err });
         }
-         const savedFramePath = extractFirstFrame(videoPath, FramePath);
+        //  const savedFramePath = extractFirstFrame(videoPath, FramePath);
       });
     } catch (error) {
       fs.unlink(videoPath, (err) => {
@@ -93,7 +93,7 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
       });
       return next("Failed uploading video", 409);
     }
-    const savedFramePath = extractFirstFrame(videoPath, FramePath);
+    // const savedFramePath = extractFirstFrame(videoPath, FramePath);
     const newVideo = await Video.create({
       videoPath,
     });
@@ -117,7 +117,7 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
 exports.streamVideos = async (req, res, next) => {
   try {
     const videoIds = req.params.videoIds.split(","); // Assuming videoIds are passed as a URL parameter and split into an array
-    console.log(videoIds);
+
     const videos = await Video.find({ _id: { $in: videoIds } });
     if (videos.length === 0) {
       return res.status(404).send("Videos not found");
