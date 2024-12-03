@@ -1,22 +1,29 @@
 require("dotenv").config({ path: ".env" });
-const cookieParser = require("cookie-parser");
 const express = require("express");
+const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
-// Import routes
+const Bull = require("bull");
 
+// Import routes
 const videoRouter = require("./routers/videoRouts");
 const userRouter = require("./routers/userRoutes");
 const aiModelRouter = require("./routers/AiModelsRoutes");
 
+// Create Express app and HTTP server
 const app = express();
 const httpServer = createServer(app);
 
+// Create Bull queue
+const userQueue = new Bull("user", {
+  redis: { host: "127.0.0.1", port: 6379 }, // Ensure proper Redis configuration
+});
+
 // Comprehensive CORS configuration
 const corsOptions = {
-  origin: "http://localhost:3000", // Specific origin
+  origin: process.env.CLIENT_URL || "http://localhost:3000", // Use env variable for flexibility
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -26,38 +33,23 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Socket.IO configuration with CORS
-const io = new Server(httpServer, {
-  cors: corsOptions,
-});
+const io = new Server(httpServer, { cors: corsOptions });
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// // Socket.IO connection handler
-// io.on("connection", (socket) => {
-//   console.log("A user connected:", socket.id);
-
-//   socket.on("message", (data) => {
-//     console.log("Message received:", data);
-//     // Broadcast to all clients including sender
-//     io.emit("message", data);
-//   });
-
-//   socket.on("model-1", () => {
-//     socket.emit("status", success);
-//   });
-// });
-
 // MongoDB connection
 mongoose
-  .connect(process.env.MONGO_URL)
+  .connect(process.env.MONGO_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-// Routes (as in your original code)
-// API routes
+// Routes
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/models", aiModelRouter);
 app.use("/api/v1/videos", videoRouter);
@@ -75,15 +67,14 @@ app.all("*", (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 4040;
-
-// Use httpServer.listen instead of app.listen to support Socket.IO
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send("Something broke!");
+  res.status(500).json({ message: "Internal Server Error" });
+});
+
+// Start the server
+const PORT = process.env.PORT || 4040;
+httpServer.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

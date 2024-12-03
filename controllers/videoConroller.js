@@ -3,15 +3,22 @@ const fs = require("fs");
 const util = require("util");
 const path = require("path");
 const CatchAsync = require("express-async-handler");
+const Queue = require("bull");
 
 const Video = require("../models/videoModel");
 const User = require("../models/userModel");
 
 // Constants
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_FILE_SIZE = 1000 * 1024 * 1024; // 100MB
 const ALLOWED_VIDEO_TYPES = /mp4|mkv|mov|avi/;
 const VIDEO_STORAGE_PATH = "./public/AllVideos";
 
+const videoUploadQueue = new Queue("video-uploads", {
+  redis: {
+    host: "localhost",
+    port: 6379,
+  },
+});
 // Configure Multer storage
 const storage = multer.memoryStorage();
 
@@ -41,7 +48,7 @@ const upload = multer({
   storage,
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter,
-}).array("videoPath", 5); // Allow up to 5 videos to be uploaded at once
+}).array("videoPath", 10); // Allow up to 5 videos to be uploaded at once
 
 exports.uploadVideo = CatchAsync(async (req, res, next) => {
   upload(req, res, async (uploadError) => {
@@ -63,60 +70,100 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
     const totalSize = req.files.reduce((sum, file) => sum + file.size, 0);
     const newStorageLimit = user.storageLimit - totalSize;
 
-    // Check storage limit
-    if (newStorageLimit < 0) {
-      return res.status(400).json({
-        message: "Storage limit exceeded. Please upgrade for more storage.",
-      });
-    }
+    // // Check storage limit
+    // if (newStorageLimit < 0) {
+    //   return res.status(400).json({
+    //     message: "Storage limit exceeded. Please upgrade for more storage.",
+    //   });
+    // }
 
     try {
-      // Ensure storage directory exists
-      await mkdir(VIDEO_STORAGE_PATH, { recursive: true });
+      // Queue jobs for each video
+      const uploadJobs = req.files.map((file) => {
+        // Prepare job data
+        const jobData = {
+          userId: user._id,
+          file: {
+            originalname: file.originalname,
+            buffer: file.buffer,
+            fieldname: file.fieldname,
+            size: file.size,
+          },
+          storageLimit: newStorageLimit,
+        };
 
-      // Process each uploaded file
-      const uploadedVideos = await Promise.all(
-        req.files.map(async (file) => {
-          // Generate unique filename
-          const filename = `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`;
-          const videoPath = path.join(VIDEO_STORAGE_PATH, filename);
-
-          // Write file to disk
-          await writeFile(videoPath, file.buffer);
-
-          // Create video record in database
-          return await Video.create({ videoPath });
-        }),
-      );
-
-      // Update user's videos and storage limit
-      await User.findByIdAndUpdate(user._id, {
-        $push: { videos: { $each: uploadedVideos.map((video) => video._id) } },
-        storageLimit: newStorageLimit,
+        // Add to queue
+        return videoUploadQueue.add(jobData, {
+          // Optional queue options
+          attempts: 3, // Retry failed jobs up to 3 times
+          backoff: {
+            type: "exponential",
+            delay: 1000, // Initial delay of 1 second
+          },
+        });
       });
+      // Wait for all upload jobs to complete
+      // await Promise.all(uploadJobs);
 
-      res.status(201).json({
-        message: "Videos uploaded successfully",
-        videos: uploadedVideos.map((video) => video._id),
-        limitStorage: newStorageLimit,
+      res.status(200).json({
+        message: "Videos have been processed successfully",
+        uploadJobs,
       });
     } catch (error) {
-      // Clean up files if an error occurs
-      await Promise.all(
-        req.files.map(async (file) => {
-          try {
-            const filename = `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`;
-            const videoPath = path.join(VIDEO_STORAGE_PATH, filename);
-            await unlink(videoPath);
-          } catch (unlinkError) {
-            console.error("Failed to delete temporary file:", unlinkError);
-          }
-        }),
-      );
-
       next(error);
     }
   });
+});
+
+// Separate worker process to handle video uploads
+videoUploadQueue.process(async (job) => {
+  const { userId, file, storageLimit } = job.data;
+
+  try {
+    // Ensure storage directory exists
+    await mkdir(VIDEO_STORAGE_PATH, { recursive: true });
+
+    // Generate unique filename
+    const filename = `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`;
+    const videoPath = path.join(VIDEO_STORAGE_PATH, filename);
+    const originalName = file.originalname;
+    const videoSize = file.size;
+
+    // Write file to disk
+    await writeFile(videoPath, Buffer.from(file.buffer));
+
+    // Create video record in database
+    const uploadedVideo = await Video.create({
+      videoPath,
+      originalName,
+      videoSize,
+    });
+
+    // Update user's videos and storage limit
+    await User.findByIdAndUpdate(userId, {
+      $push: { videos: uploadedVideo._id },
+      storageLimit: storageLimit - file.size,
+    });
+
+    return {
+      videoId: userId,
+      message: "Video processed successfully",
+    };
+  } catch (error) {
+    // Log the error and rethrow to trigger retry
+    console.error("Video upload processing error:", error);
+    throw error;
+  }
+});
+
+// Optional: Handle completed jobs
+videoUploadQueue.on("completed", (job, result) => {
+  console.log(`Job ${job.id} completed with result:`, result);
+});
+
+// Optional: Handle failed jobs
+videoUploadQueue.on("failed", (job, err) => {
+  console.error(`Job ${job.id} failed with error:`, err);
 });
 
 exports.streamVideos = CatchAsync(async (req, res, next) => {

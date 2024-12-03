@@ -1,0 +1,46 @@
+// Add job to queue
+const sendNewtest = async (test) => {
+  console.log("Adding job to queue...");
+  await userQueue.add(test);
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  console.log("Job added to queue.");
+};
+
+// Process queue jobs
+userQueue.process(async (job) => {
+  try {
+    console.log("Processing job:", job.id, "with data:", job.data);
+    const { test } = job.data;
+
+    // Simulate processing delay (if needed)
+
+    console.log(`Job ${job.id} processed successfully.`);
+    return { success: true, message: "Test processed successfully" };
+  } catch (error) {
+    console.error("Error processing job:", error);
+    throw error;
+  }
+});
+
+// Handle queue events
+userQueue.on("completed", (job, result) => {
+  console.log(`Job ${job.id} completed with result:`, result);
+});
+
+userQueue.on("failed", (job, error) => {
+  console.error(`Job ${job.id} failed with error:`, error);
+});
+
+// Route to add jobs to the queue
+app.post("/send-email", async (req, res) => {
+  const { test } = req.body;
+
+  try {
+    await sendNewtest({ test });
+    console.log("Job successfully queued.");
+    res.json({ message: "Job successfully queued." });
+  } catch (error) {
+    console.error("Error queuing job:", error);
+    res.status(500).json({ message: "Failed to queue the job." });
+  }
+});
