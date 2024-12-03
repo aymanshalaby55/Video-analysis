@@ -102,8 +102,6 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
           },
         });
       });
-      // Wait for all upload jobs to complete
-      // await Promise.all(uploadJobs);
 
       res.status(200).json({
         message: "Videos have been processed successfully",
@@ -125,7 +123,7 @@ videoUploadQueue.process(async (job) => {
 
     // Generate unique filename
     const filename = `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`;
-    const videoPath = path.join(VIDEO_STORAGE_PATH, filename);
+    const videoPath = path.join(filename);
     const originalName = file.originalname;
     const videoSize = file.size;
 

@@ -1,5 +1,6 @@
-const AiModel = require("../models/AiModel");
 const CatchAsync = require("express-async-handler");
+
+const AiModel = require("../models/AiModel");
 
 exports.getUserAllAiModels = CatchAsync(async (req, res, next) => {
   const aiModels = await AiModel.find({ isActive: true });

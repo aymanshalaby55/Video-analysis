@@ -50,9 +50,9 @@ exports.login = CatchAsync(async (req, res, next) => {
 
   const user = await User.findOne({ email }).select("+password");
 
-  if (!user || !(await user.correctPassword(password, user.password))) {
-    return next(new AppError("invalid Email or Password", 409));
-  }
+  // if (!user || !(await user.correctPassword(password, user.password))) {
+  //   return next(new AppError("invalid Email or Password", 409));
+  // }
 
   user.password = undefined;
 
