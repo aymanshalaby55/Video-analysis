@@ -1,4 +1,4 @@
-const AppErorr = require('../utils/appError');
+const AppErorr = require("../utils/appError");
 
 const handleCastErrorDB = (err) => {
   const message = `invalid ${err.path}: ${err.value}`;
@@ -11,19 +11,19 @@ const handleDublicateErrorDB = (err) => {
 };
 const handleValidationErrDB = (err) => {
   const errors = Object.values(err.errors).map((val) => val.message);
-  const message = `invalid input data ${errors.join('. ')}`;
+  const message = `invalid input data ${errors.join(". ")}`;
   return new AppErorr(message, 400);
 };
 const handJWTError = () =>
-  new AppErorr('Invalid token, please Log in again!', 401);
+  new AppErorr("Invalid token, please Log in again!", 401);
 
 const handJWTExpireDate = () =>
-  new AppErorr('Token Expired, please log in again', 401);
+  new AppErorr("Token Expired, please log in again", 401);
 
 const SendErrorDev = (err, req, res) => {
-  if (req.originalUrl.startsWith('/api')) {
+  if (req.originalUrl.startsWith("/api")) {
     res.status(err.statusCode).json({
-      status: 'fail',
+      status: "fail",
       err: err,
       message: err.message,
       Stack: err.Stack,
@@ -31,7 +31,7 @@ const SendErrorDev = (err, req, res) => {
   } else {
     // Render error pages
     res.json({
-      title: 'Something went wrong',
+      title: "Something went wrong",
       msg: err.message,
     });
   }
@@ -40,7 +40,7 @@ const SendErrorDev = (err, req, res) => {
 const SendErrorPro = (err, req, res) => {
   if (err.isOperational) {
     res.status(err.statusCode).json({
-      status: 'fail',
+      status: "fail",
       err: err,
       message: err.message,
       Stack: err.Stack,
@@ -48,8 +48,8 @@ const SendErrorPro = (err, req, res) => {
   } else {
     console.error(err); // special log for errors
     res.status(500).json({
-      status: 'error',
-      message: 'something went wrong',
+      status: "error",
+      message: "something went wrong",
     });
   }
 };
@@ -57,26 +57,26 @@ const SendErrorPro = (err, req, res) => {
 // middleware error function
 module.exports = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
-  if (process.env.NODE_ENV === 'development') {
+  err.status = err.status || "error";
+  if (process.env.NODE_ENV === "development") {
     SendErrorDev(err, req, res);
-  } else if (process.env.NODE_ENV === 'production') {
+  } else if (process.env.NODE_ENV === "production") {
     //  cast error
     let error = { err };
 
-    if (error.name === 'CastError') {
+    if (error.name === "CastError") {
       error = handleCastErrorDB(error);
     }
     if (err.code === 11000) {
       error = handleDublicateErrorDB(error);
     }
-    if (err.name === 'validatonError') {
+    if (err.name === "validatonError") {
       error = handleValidationErrDB(error);
     }
-    if (err.name === 'JsonWebTokenError') {
+    if (err.name === "JsonWebTokenError") {
       error = handJWTError(error);
     }
-    if (err.name === 'TokenExpiredError') {
+    if (err.name === "TokenExpiredError") {
       error = handJWTExpireDate(error);
     }
 

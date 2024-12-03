@@ -5,6 +5,14 @@ const videoSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  originalName: {
+    type: String,
+    required: true,
+  },
+  videoSize: {
+    type: Number,
+    required: true,
+  },
   aiModel: {
     type: mongoose.Schema.ObjectId,
     ref: "aiModel",
