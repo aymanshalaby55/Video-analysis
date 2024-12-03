@@ -11,6 +11,8 @@ const Bull = require("bull");
 const videoRouter = require("./routers/videoRouts");
 const userRouter = require("./routers/userRoutes");
 const aiModelRouter = require("./routers/AiModelsRoutes");
+const aiCallRoutes = require("./routers/aiCallsRoutes");
+const { initializeSocket } = require("./controllers/aiCallController");
 
 // Create Express app and HTTP server
 const app = express();
@@ -53,6 +55,9 @@ mongoose
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/models", aiModelRouter);
 app.use("/api/v1/videos", videoRouter);
+app.use("/api/v1/aiCalls", aiCallRoutes);
+
+initializeSocket(httpServer);
 
 // Health check route
 app.get("/health", (req, res) => {

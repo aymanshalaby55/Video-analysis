@@ -1,8 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const aiCallController = require('../controllers/aiCallController');
-const { protect, verifyTokenAndAdmin } = require('../middleware/verifyToken');
+const aiCallController = require("../controllers/aiCallController");
+const { protect, verifyTokenAndAdmin } = require("../middleware/verifyToken");
 
-router.get('/analyzeModel', aiCallController.analyzeVideo);
+router.post("/addVideosToQueue", aiCallController.addVideosToQueue);
 
 module.exports = router;
