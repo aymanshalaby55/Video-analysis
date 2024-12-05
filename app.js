@@ -4,18 +4,18 @@ const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const { createServer } = require("http");
+const { initializeSocket } = require("./utils/socket");
 
 // Import routes
 const videoRouter = require("./routers/videoRouts");
 const userRouter = require("./routers/userRoutes");
 const aiModelRouter = require("./routers/AiModelsRoutes");
 const aiCallRoutes = require("./routers/aiCallsRoutes");
-const { io } = require("./utils/socket");
 
 // Create Express app and HTTP server
 const app = express();
 const httpServer = createServer(app);
-
+const io = initializeSocket(httpServer);
 // Comprehensive CORS configuration
 const corsOptions = {
   origin: process.env.CLIENT_URL || "http://localhost:3000", // Use env variable for flexibility

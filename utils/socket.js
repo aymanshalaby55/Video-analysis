@@ -1,13 +1,13 @@
 const socketIO = require("socket.io");
-const { createServer } = require("http");
 
-// Initialize Socket.IO
+let io;
 
 const initializeSocket = (server) => {
-  let io = socketIO(server, {
+  io = socketIO(server, {
     cors: {
-      origin: "*",
+      origin: process.env.CLIENT_URL || "*",
       methods: ["GET", "POST"],
+      credentials: true,
     },
   });
 
@@ -22,7 +22,11 @@ const initializeSocket = (server) => {
   return io;
 };
 
-// Socket.IO instance for handling real-time connections and events
-const io = initializeSocket(createServer());
+const getSocketIO = () => {
+  if (!io) {
+    throw new Error("Socket.IO not initialized");
+  }
+  return io;
+};
 
-module.exports = { io };
+module.exports = { initializeSocket, getSocketIO };

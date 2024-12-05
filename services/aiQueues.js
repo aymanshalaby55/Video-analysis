@@ -1,10 +1,9 @@
-const axios = require("axios");
 const Queue = require("bull");
-const { createServer } = require("http");
+const { getSocketIO } = require("../utils/socket");
+const { default: axios } = require("axios");
+const path = require("path");
+const fs = require("fs");
 
-const { io } = require("../utils/socket");
-
-// Create processing queue
 const aiProcessingQueue = new Queue("ai-processing", {
   redis: {
     host: process.env.REDIS_HOST || "localhost",
@@ -12,18 +11,34 @@ const aiProcessingQueue = new Queue("ai-processing", {
   },
 });
 
-// Process jobs in the queue
 aiProcessingQueue.process(async (job) => {
   try {
+    const io = getSocketIO();
+
     console.log(
       `Started processing job: ${job.id}, video: ${job.data.videoPath}`,
     );
 
-    // Get the io instance from the socket initialization
     io.emit("analysisStarted", {
       jobId: job.id,
       videoPath: job.data.videoPath,
     });
+
+    // logic to pass the videos from the queue to the ai model
+
+    const videoPath = path.resolve(
+      __dirname,
+      "..",
+      "public",
+      "AllVideos",
+      job.data.videoPath,
+    );
+
+    const { data } = await axios.post(`http://127.0.0.1:5000/detect`, {
+      videoPath: "C:/Users/ahrom/Downloads/test.mp4",
+    });
+
+    console.log(data);
 
     job.progress(50);
     io.emit("analysisProgress", {
@@ -32,11 +47,11 @@ aiProcessingQueue.process(async (job) => {
       status: `Processing video: ${job.data.videoPath}`,
     });
 
-    // Return results
     const result = {
       videoPath: job.data.videoPath,
       status: "Completed",
     };
+
     console.log(
       `Completed processing job: ${job.id}, video: ${job.data.videoPath}`,
     );
@@ -48,7 +63,12 @@ aiProcessingQueue.process(async (job) => {
     return result;
   } catch (error) {
     console.error(`Error processing job: ${job.id}`, error.message);
-    io.emit("analysisError", { jobId: job.id, error: error.message });
+    try {
+      const io = getSocketIO();
+      io.emit("analysisError", { jobId: job.id, error: error.message });
+    } catch (err) {
+      console.error("Failed to emit error event:", err.message);
+    }
     throw error;
   }
 });
