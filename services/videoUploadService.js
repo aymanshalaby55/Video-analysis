@@ -9,7 +9,7 @@ const User = require("../models/userModel");
 // Constants
 const MAX_FILE_SIZE = 1000 * 1024 * 1024; // 100MB
 const ALLOWED_VIDEO_TYPES = /mp4|mkv|mov|avi/;
-const VIDEO_STORAGE_PATH = "../public/AllVideos";
+const VIDEO_STORAGE_PATH = "./public/AllVideos";
 
 // Create video upload queue
 const videoUploadQueue = new Queue("video-uploads", {
@@ -55,15 +55,17 @@ videoUploadQueue.process(async (job) => {
     // Ensure storage directory exists
     try {
       await access(VIDEO_STORAGE_PATH);
-    } catch {
-      await mkdir(VIDEO_STORAGE_PATH, { recursive: true });
+    } catch (err) {
+      if (err.code === "ENOENT") {
+        await mkdir(VIDEO_STORAGE_PATH, { recursive: true });
+      } else {
+        throw err;
+      }
     }
-
     // Generate unique filename
     const timestamp = Date.now();
-    const filename = `${timestamp}-${file.originalname}`;
+    const filename = `videoPath-${timestamp}`;
     const filepath = path.join(VIDEO_STORAGE_PATH, filename);
-
     // Save file to disk
     await writeFile(filepath, Buffer.from(file.buffer));
 
@@ -76,7 +78,10 @@ videoUploadQueue.process(async (job) => {
     });
 
     // Update user storage limit
-    await User.findByIdAndUpdate(userId, { storageLimit });
+    await User.findByIdAndUpdate(userId, {
+      $inc: { storageLimit: -file.size },
+      $push: { videos: video._id },
+    });
 
     return {
       status: "success",

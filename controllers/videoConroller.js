@@ -40,7 +40,6 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
         message: "Storage limit exceeded. Please upgrade for more storage.",
       });
     }
-
     try {
       // Queue jobs for each video
       const uploadJobs = req.files.map((file) => {
