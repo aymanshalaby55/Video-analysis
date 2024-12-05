@@ -4,24 +4,17 @@ const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const { createServer } = require("http");
-const { Server } = require("socket.io");
-const Bull = require("bull");
 
 // Import routes
 const videoRouter = require("./routers/videoRouts");
 const userRouter = require("./routers/userRoutes");
 const aiModelRouter = require("./routers/AiModelsRoutes");
 const aiCallRoutes = require("./routers/aiCallsRoutes");
-const { initializeSocket } = require("./controllers/aiCallController");
+const { io } = require("./utils/socket");
 
 // Create Express app and HTTP server
 const app = express();
 const httpServer = createServer(app);
-
-// Create Bull queue
-const userQueue = new Bull("user", {
-  redis: { host: "127.0.0.1", port: 6379 }, // Ensure proper Redis configuration
-});
 
 // Comprehensive CORS configuration
 const corsOptions = {
@@ -33,9 +26,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-// Socket.IO configuration with CORS
-const io = new Server(httpServer, { cors: corsOptions });
 
 // Middleware
 app.use(express.json());
@@ -56,8 +46,6 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/models", aiModelRouter);
 app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/aiCalls", aiCallRoutes);
-
-initializeSocket(httpServer);
 
 // Health check route
 app.get("/health", (req, res) => {
