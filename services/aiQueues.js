@@ -20,7 +20,6 @@ aiProcessingQueue.process(async (job) => {
     );
 
     // Get the io instance from the socket initialization
-
     io.emit("analysisStarted", {
       jobId: job.id,
       videoPath: job.data.videoPath,
