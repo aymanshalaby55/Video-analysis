@@ -166,6 +166,20 @@ exports.getAllVideos = CatchAsync(async (req, res) => {
   });
 });
 
+exports.getUserVideos = CatchAsync(async (req, res) => {
+  const { user } = req;
+
+  // Find all videos belonging to the user
+  const videos = await Video.find({ user: user._id });
+
+  res.status(200).json({
+    status: "success", 
+    results: videos.length,
+    data: { videos }
+  });
+});
+
+
 exports.deleteVideo = CatchAsync(async (req, res, next) => {
   const { videoId } = req.params;
   const { user } = req;

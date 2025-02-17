@@ -11,6 +11,7 @@ const videoRouter = require("./routers/videoRouts");
 const userRouter = require("./routers/userRoutes");
 const aiModelRouter = require("./routers/AiModelsRoutes");
 const aiCallRoutes = require("./routers/aiCallsRoutes");
+const pipelineRoutes = require("./routers/pipelineRoutes");
 
 // Create Express app and HTTP server
 const app = express();
@@ -46,6 +47,7 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/models", aiModelRouter);
 app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/aiCalls", aiCallRoutes);
+app.use("/api/v1/pipeline", pipelineRoutes);
 
 // Health check route
 app.get("/health", (req, res) => {

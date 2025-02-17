@@ -10,3 +10,5 @@ router.post("/createPipeline", pipelineController.createPipeline);
 router.get("/getPipeline/:id", pipelineController.getPipeline);
 router.put("/updatePipeline/:id", pipelineController.updatePipeline);
 router.delete("/deletePipeline/:id", pipelineController.deletePipeline);
+
+module.exports = router;

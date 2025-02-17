@@ -8,6 +8,7 @@ router.get("/streamVideo/:videoIds", videoController.streamVideos);
 
 router.use(protect);
 router.get("/getAllVideos", protect, videoController.getAllVideos);
+router.get("/getUserVideos", protect, videoController.getUserVideos);
 router.post("/uploadVideo", videoController.uploadVideo);
 // router.get('/getVideo', videoController.getVideo);
 

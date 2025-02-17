@@ -3,7 +3,8 @@ const Pipeline = require("../models/PipleModel");
 async function getAllPipelines(req, res) {
   try {
     const pipelines = await Pipeline.find();
-    res.status(200).json(pipelines);
+    const { user } = req;
+    res.status(200).json({ pipelines, user: user });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
