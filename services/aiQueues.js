@@ -35,7 +35,7 @@ aiProcessingQueue.process(async (job) => {
     );
 
     const { data } = await axios.post(`http://127.0.0.1:5000/detect`, {
-      videoPath: "C:/Users/ahrom/Downloads/test.mp4",
+      videoPath: videoPath,
     });
 
     console.log(data);

@@ -64,7 +64,7 @@ videoUploadQueue.process(async (job) => {
     }
     // Generate unique filename
     const timestamp = Date.now();
-    const filename = `videoPath-${timestamp}`;
+    const filename = `videoPath-${timestamp}.mp4`;
     const filepath = path.join(VIDEO_STORAGE_PATH, filename);
     // Save file to disk
     await writeFile(filepath, Buffer.from(file.buffer));

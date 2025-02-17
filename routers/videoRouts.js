@@ -7,7 +7,7 @@ const filesSizeValidation = require("../middleware/filesSizeValidation");
 router.get("/streamVideo/:videoIds", videoController.streamVideos);
 
 router.use(protect);
-router.get("/getAllVideos", verifyTokenAndAdmin, videoController.getAllVideos);
+router.get("/getAllVideos", protect, videoController.getAllVideos);
 router.post("/uploadVideo", videoController.uploadVideo);
 // router.get('/getVideo', videoController.getVideo);
 
