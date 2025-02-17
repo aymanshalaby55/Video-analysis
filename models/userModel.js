@@ -62,6 +62,12 @@ const userSchema = new mongoose.Schema(
         ref: "Video",
       },
     ],
+    pipelines: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Pipeline",
+      },
+    ],
   },
   { timestamps: true },
 );
