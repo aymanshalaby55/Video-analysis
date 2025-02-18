@@ -37,7 +37,7 @@ aiProcessingQueue.process(async (job) => {
     const { data: modelResult } = await axios.post(
       `http://127.0.0.1:5000/detect`,
       {
-        videoPath: videoPath,
+        video_path: videoPath,
       },
     );
 
