@@ -41,6 +41,10 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
       });
     }
     try {
+      // Update user's storage limit
+      user.storageLimit = newStorageLimit;
+      await user.save();
+
       // Queue jobs for each video
       const uploadJobs = req.files.map((file) => {
         const jobData = {
@@ -66,6 +70,7 @@ exports.uploadVideo = CatchAsync(async (req, res, next) => {
       res.status(200).json({
         message: "Videos have been queued for processing",
         uploadJobs: uploadJobs.map((job) => job.id),
+        updatedStorageLimit: newStorageLimit,
       });
     } catch (error) {
       next(error);
@@ -169,16 +174,15 @@ exports.getAllVideos = CatchAsync(async (req, res) => {
 exports.getUserVideos = CatchAsync(async (req, res) => {
   const { user } = req;
 
-  // Find all videos belonging to the user
-  const videos = await Video.find({ user: user._id });
-
+  // Get user with populated videos
+  const populatedUser = await User.findById(user._id).populate("videos");
+  const userVideos = populatedUser.videos;
   res.status(200).json({
-    status: "success", 
-    results: videos.length,
-    data: { videos }
+    status: "success",
+    results: userVideos.length,
+    data: { userVideos },
   });
 });
-
 
 exports.deleteVideo = CatchAsync(async (req, res, next) => {
   const { videoId } = req.params;
