@@ -24,7 +24,12 @@ aiProcessingQueue.process(async (job) => {
       videoPath: job.data.videoPath,
     });
 
-    // logic to pass the videos from the queue to the ai model
+    // Phase 1: Initialization
+    io.emit("analysisProgress", {
+      jobId: job.id,
+      progress: 10,
+      phase: "Initializing analysis...",
+    });
 
     const videoPath = path.resolve(
       __dirname,
@@ -34,19 +39,26 @@ aiProcessingQueue.process(async (job) => {
       job.data.videoPath,
     );
 
+    // Phase 2: Loading Model
+    io.emit("analysisProgress", {
+      jobId: job.id,
+      progress: 20,
+      phase: "Loading AI model...",
+    });
+
+    // Phase 3: Processing
+    io.emit("analysisProgress", {
+      jobId: job.id,
+      progress: 40,
+      phase: "Processing video...",
+    });
+
     const { data: modelResult } = await axios.post(
       `http://127.0.0.1:5000/detect`,
       {
         video_path: videoPath,
       },
     );
-
-    job.progress(50);
-    io.emit("analysisProgress", {
-      jobId: job.id,
-      progress: 50,
-      status: `Processing video: ${job.data.videoPath}`,
-    });
 
     const result = {
       videoPath: job.data.videoPath,
